@@ -1,0 +1,1593 @@
+<meta charset="utf-8">
+<title>Dashboard Gerencial — Auditorías Retail GOH</title>
+<style>
+  :root{
+    color-scheme: light;
+    --plane:      #f9f9f7;
+    --surface:    #fcfcfb;
+    --surface-2:  #f2f1ed;
+    --ink:        #0b0b0b;
+    --ink-2:      #52514e;
+    --ink-muted:  #898781;
+    --grid:       #e1e0d9;
+    --baseline:   #c3c2b7;
+    --border:     rgba(11,11,11,0.10);
+    --accent:     #2a78d6;
+    --accent-wash:#e7f0fb;
+    --seq-100:#cde2fb; --seq-200:#9ec5f4; --seq-300:#6da7ec; --seq-400:#3987e5; --seq-500:#256abf; --seq-600:#184f95;
+    --cat-1:#2a78d6; --cat-2:#eb6834; --cat-3:#1baf7a;
+    --good:     #0ca30c;
+    --warning:  #fab219;
+    --serious:  #ec835a;
+    --critical: #d03b3b;
+    --good-wash:#e6f6e6; --warning-wash:#fff6e2; --serious-wash:#fdece5; --critical-wash:#fbe7e7;
+    /* muted "ink" tones — for coloring text/numbers without shouting; used
+       instead of the vivid chart-status colors wherever color sits on letters */
+    --ink-good:     #3d7a45;
+    --ink-warning:  #9c6b1f;
+    --ink-critical: #ad3d3d;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:where(:not([data-theme="light"])){
+      color-scheme: dark;
+      --plane:      #0d0d0d;
+      --surface:    #1a1a19;
+      --surface-2:  #212120;
+      --ink:        #ffffff;
+      --ink-2:      #c3c2b7;
+      --ink-muted:  #898781;
+      --grid:       #2c2c2a;
+      --baseline:   #383835;
+      --border:     rgba(255,255,255,0.10);
+      --accent:     #3987e5;
+      --accent-wash:rgba(57,135,229,0.14);
+      --seq-100:#184f95; --seq-200:#1c5cab; --seq-300:#256abf; --seq-400:#2a78d6; --seq-500:#5598e7; --seq-600:#86b6ef;
+      --cat-1:#3987e5; --cat-2:#d95926; --cat-3:#199e70;
+      --good-wash:rgba(12,163,12,0.16); --warning-wash:rgba(250,178,25,0.16); --serious-wash:rgba(236,131,90,0.16); --critical-wash:rgba(208,59,59,0.16);
+      --ink-good: #7fc487; --ink-warning: #d7ab5c; --ink-critical: #e08a8a;
+    }
+  }
+  :root[data-theme="dark"]{
+    color-scheme: dark;
+    --plane:      #0d0d0d;
+    --surface:    #1a1a19;
+    --surface-2:  #212120;
+    --ink:        #ffffff;
+    --ink-2:      #c3c2b7;
+    --ink-muted:  #898781;
+    --grid:       #2c2c2a;
+    --baseline:   #383835;
+    --border:     rgba(255,255,255,0.10);
+    --accent:     #3987e5;
+    --accent-wash:rgba(57,135,229,0.14);
+    --seq-100:#184f95; --seq-200:#1c5cab; --seq-300:#256abf; --seq-400:#2a78d6; --seq-500:#5598e7; --seq-600:#86b6ef;
+    --cat-1:#3987e5; --cat-2:#d95926; --cat-3:#199e70;
+    --good-wash:rgba(12,163,12,0.16); --warning-wash:rgba(250,178,25,0.16); --serious-wash:rgba(236,131,90,0.16); --critical-wash:rgba(208,59,59,0.16);
+    --ink-good: #7fc487; --ink-warning: #d7ab5c; --ink-critical: #e08a8a;
+  }
+  :root[data-theme="light"]{ color-scheme: light; --plane:#f9f9f7; --surface:#fcfcfb; --ink:#0b0b0b; --ink-good:#3d7a45; --ink-warning:#9c6b1f; --ink-critical:#ad3d3d; }
+
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    background:var(--plane); color:var(--ink);
+    font-family: system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    font-size:15px; line-height:1.5; -webkit-font-smoothing:antialiased;
+  }
+  .num{ font-family: ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-variant-numeric:tabular-nums; }
+  .wrap{ max-width:1880px; margin:0 auto; padding:32px 40px 64px; }
+
+  .hdr{ display:flex; justify-content:space-between; align-items:flex-end; gap:16px; flex-wrap:wrap; margin-bottom:16px; padding-bottom:18px; border-bottom:1px solid var(--border); }
+  .hdr-eyebrow{ font-size:13px; font-weight:700; letter-spacing:.09em; text-transform:uppercase; color:var(--accent); margin:0 0 6px; }
+  .hdr h1{ font-size:29px; font-weight:700; letter-spacing:-0.01em; margin:0 0 6px; text-wrap:balance; }
+  .hdr p{ margin:0; color:var(--ink-2); font-size:15px; }
+  .hdr-meta{ text-align:right; font-size:15px; color:var(--ink-muted); line-height:1.6; }
+
+  /* control bar */
+  .ctrl{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:12px 16px; margin-bottom:22px; }
+  .ctrl-group{ display:flex; align-items:center; gap:6px; }
+  .ctrl label{ font-size:11px; color:var(--ink-muted); font-weight:600; text-transform:uppercase; letter-spacing:.03em; }
+  .ctrl input[type=date]{ font-family: ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:12.5px; padding:5px 8px; border-radius:7px; border:1px solid var(--border); background:var(--surface-2); color:var(--ink); }
+  .ctrl-sep{ width:1px; height:22px; background:var(--border); margin:0 4px; }
+  .preset{ font-size:11.5px; font-weight:600; padding:6px 11px; border-radius:100px; border:1px solid var(--border); background:var(--surface-2); color:var(--ink-2); cursor:pointer; white-space:nowrap; }
+  .preset:hover{ background:var(--accent-wash); color:var(--accent); }
+  .preset.active{ background:var(--accent); border-color:var(--accent); color:#fff; }
+  .ctrl-count{ margin-left:auto; font-size:12px; color:var(--ink-muted); }
+  .ctrl-count b{ color:var(--ink); font-family: ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+
+  .view-toggle{ display:flex; gap:4px; background:var(--surface-2); border:1px solid var(--border); border-radius:10px; padding:4px; width:max-content; margin-bottom:22px; }
+  .view-tab{ font-size:12.5px; font-weight:700; padding:7px 16px; border-radius:7px; border:none; background:transparent; color:var(--ink-2); cursor:pointer; }
+  .view-tab.active{ background:var(--surface); color:var(--accent); box-shadow:0 1px 3px var(--border); }
+  .exec-list{ list-style:none; margin:12px 0 0; padding:0; display:flex; flex-direction:column; gap:9px; }
+  .exec-list li{ font-size:12.5px; line-height:1.55; padding-left:18px; position:relative; color:var(--ink-2); }
+  .exec-list li::before{ content:"—"; position:absolute; left:0; color:var(--accent); font-weight:700; }
+  .exec-list li b{ color:var(--ink); }
+
+  .sec-title{ font-size:12px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--ink-muted); margin:26px 0 12px; display:flex; align-items:center; gap:8px; }
+  .sec-title:first-of-type{ margin-top:0; }
+  .sec-title .accent-bar{ width:3px; height:12px; background:var(--accent); border-radius:2px; }
+  .sec-note{ font-size:11.5px; color:var(--ink-muted); margin:-8px 0 14px; }
+
+  .kpi-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:16px; }
+  .kpi{ background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:16px 18px; position:relative; overflow:hidden; }
+  .kpi::before{ content:""; position:absolute; left:0; top:0; bottom:0; width:2px; background:var(--stripe,var(--border)); opacity:0.8; }
+  .kpi-label{ font-size:11px; font-weight:600; color:var(--ink-2); text-transform:uppercase; letter-spacing:.04em; }
+  .kpi-value{ font-size:28px; font-weight:700; margin-top:8px; letter-spacing:-0.01em; color:var(--tone,var(--ink)); }
+  .kpi-sub{ font-size:11.5px; color:var(--ink-muted); margin-top:4px; }
+
+  /* stat pulls + sparkline — quiet alternative to a full bar chart */
+  .trend-stat-row{ display:flex; gap:30px; flex-wrap:wrap; margin:10px 0 16px; }
+  .trend-stat-value{ font-size:26px; font-weight:700; letter-spacing:-0.01em; }
+  .trend-stat-label{ font-size:10.5px; color:var(--ink-muted); text-transform:uppercase; letter-spacing:.03em; margin-top:2px; }
+
+  /* tiendas cerradas — compact executive footnote, not an itemized list */
+  .closed-note{ font-size:12px; color:var(--ink-2); }
+  .closed-note b{ color:var(--ink-critical); font-family: ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+  .closed-inline{ margin-top:8px; font-size:11px; color:var(--ink-muted); line-height:1.7; }
+  .closed-inline b{ color:var(--ink-2); font-weight:600; }
+
+  .row2{ display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:20px; align-items:start; }
+  .row3{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:20px; margin-bottom:20px; align-items:start; }
+  .row3 > .card{ margin-bottom:0; }
+
+  /* ranked list — HTML/CSS bars, avoids SVG text-overflow collisions on long labels */
+  .rlist{ display:flex; flex-direction:column; gap:7px; margin-top:10px; }
+  .rlist-row{ display:grid; grid-template-columns:22px minmax(0,1fr) 90px; align-items:center; gap:10px; }
+  .rlist-rank{ font-size:10.5px; color:var(--ink-muted); font-family: ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; text-align:right; }
+  .rlist-mid{ min-width:0; }
+  .rlist-label{ font-size:11.5px; color:var(--ink-2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-bottom:3px; }
+  .rlist-track{ height:7px; background:var(--surface-2); border-radius:4px; overflow:hidden; }
+  .rlist-fill{ height:100%; border-radius:4px; }
+  .rlist-value{ font-size:11px; font-weight:700; font-family: ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; text-align:right; white-space:nowrap; }
+
+  /* cascading selects */
+  .select-row{ display:flex; gap:10px; flex-wrap:wrap; margin:10px 0 4px; }
+  .select-row select{ font-size:12.5px; padding:7px 10px; border-radius:8px; border:1px solid var(--border); background:var(--surface-2); color:var(--ink); min-width:180px; }
+  .status-badge{ font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.03em; padding:3px 9px; border-radius:100px; }
+  .status-badge.activa{ background:var(--good-wash); color:var(--good); }
+  .status-badge.cerrada{ background:var(--critical-wash); color:var(--critical); }
+
+  .tienda-shell{ display:grid; grid-template-columns:1fr 260px; gap:20px; align-items:start; }
+  .risk-pick-row{ display:flex; justify-content:space-between; align-items:center; gap:8px; padding:8px 0; border-bottom:1px solid var(--border); cursor:pointer; background:none; border-left:none; border-right:none; border-top:none; width:100%; text-align:left; font:inherit; color:inherit; }
+  .risk-pick-row:last-child{ border-bottom:none; }
+  .risk-pick-row:hover{ background:var(--accent-wash); margin:0 -8px; padding-left:8px; padding-right:8px; border-radius:6px; }
+  .risk-pick-name{ font-size:11.5px; font-weight:600; }
+  .risk-pick-sub{ font-size:10px; color:var(--ink-muted); margin-top:1px; }
+  @media (max-width:980px){ .tienda-shell{ grid-template-columns:1fr; } }
+  .card{ background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:24px 28px; margin-bottom:20px; box-shadow:0 1px 2px rgba(11,11,11,0.04), 0 4px 16px rgba(11,11,11,0.03); }
+  .card-compact{ padding:12px 16px; }
+  .card-compact .card-hd{ margin-bottom:0; }
+  .h3-quiet{ font-size:12.5px; font-weight:700; color:var(--ink-2); margin:0; }
+  .row2 > .card{ margin-bottom:0; }
+  .card-hd{ display:flex; justify-content:space-between; align-items:baseline; gap:10px; margin-bottom:2px; flex-wrap:wrap; }
+  .card-hd h3{ font-size:14px; font-weight:700; margin:0; }
+  .card-note{ font-size:11.5px; color:var(--ink-muted); }
+  .chart-box{ margin-top:10px; }
+  .chart-wrap{ position:relative; }
+  svg.chart{ width:100%; height:auto; overflow:visible; }
+  .grid-line{ stroke:var(--grid); stroke-width:1; }
+  .axis-lbl{ fill:var(--ink-muted); font-size:13px; font-family: ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+  .cat-lbl{ fill:var(--ink-2); font-size:13.5px; }
+  .val-lbl{ fill:var(--ink); font-size:13.5px; font-weight:600; font-family: ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+  .dot{ fill:var(--accent); stroke:var(--surface); stroke-width:2; cursor:pointer; }
+  .bar{ cursor:pointer; }
+  .bar:hover{ filter:brightness(1.08); }
+  .tooltip{ position:absolute; pointer-events:none; background:var(--ink); color:var(--plane); font-size:11.5px; padding:7px 10px; border-radius:7px; line-height:1.4; opacity:0; transform:translate(-50%,-100%); transition:opacity .1s; white-space:nowrap; z-index:5; box-shadow:0 4px 14px rgba(0,0,0,.18); }
+  .tooltip b{ font-family: ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+  .legend{ display:flex; gap:14px; flex-wrap:wrap; margin-top:10px; font-size:11px; color:var(--ink-2); }
+  .legend span{ display:inline-flex; align-items:center; gap:5px; }
+  .legend i{ width:9px; height:9px; border-radius:2px; display:inline-block; }
+  .legend i.line{ width:14px; height:2px; border-radius:0; }
+
+  .alert-row{ display:flex; align-items:center; justify-content:space-between; gap:10px; padding:9px 0; border-bottom:1px solid var(--border); }
+  .alert-row:last-child{ border-bottom:none; }
+  .alert-name{ font-size:12.5px; font-weight:600; }
+  .alert-sub{ font-size:10.5px; color:var(--ink-muted); margin-top:1px; }
+  .sev-dot{ width:8px; height:8px; border-radius:50%; display:inline-block; margin-right:7px; flex:none; }
+  .count-badge{ font-size:11px; font-weight:700; font-family: ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; background:var(--surface-2); border:1px solid var(--border); border-radius:7px; padding:3px 8px; }
+
+  .aging-row{ margin-bottom:12px; } .aging-row:last-child{ margin-bottom:0; }
+  .aging-top{ display:flex; justify-content:space-between; font-size:11.5px; margin-bottom:5px; }
+  .aging-track{ height:8px; background:var(--surface-2); border-radius:5px; overflow:hidden; }
+  .aging-fill{ height:100%; border-radius:5px; }
+
+  /* month menu */
+  .month-shell{ display:grid; grid-template-columns:220px 1fr; gap:0; border:1px solid var(--border); border-radius:10px; overflow:hidden; margin-top:10px; }
+  .month-list{ max-height:380px; overflow-y:auto; border-right:1px solid var(--border); background:var(--surface-2); }
+  .month-item{ display:flex; justify-content:space-between; align-items:center; padding:9px 14px; font-size:12px; cursor:pointer; border-bottom:1px solid var(--border); }
+  .month-item:hover{ background:var(--accent-wash); }
+  .month-item.active{ background:var(--accent); color:#fff; }
+  .month-item.active .count-badge{ background:rgba(255,255,255,0.22); border-color:transparent; color:#fff; }
+  .month-detail{ padding:14px 16px; max-height:380px; overflow:auto; }
+  .month-detail-hd{ font-size:12px; font-weight:700; margin-bottom:8px; }
+
+  table.dtable{ width:100%; border-collapse:collapse; font-size:13.5px; }
+  table.dtable th{ text-align:left; font-size:11.5px; text-transform:uppercase; letter-spacing:.03em; color:var(--ink-muted); font-weight:700; padding:11px 14px; border-bottom:2px solid var(--border); white-space:nowrap; }
+  table.dtable td{ padding:11px 14px; border-bottom:1px solid var(--border); white-space:nowrap; }
+  table.dtable td.num, table.dtable th.num{ font-family: ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; text-align:right; }
+  table.dtable tbody tr:nth-child(even) td{ background:var(--surface-2); }
+  table.dtable tr:hover td{ background:var(--accent-wash); }
+  .table-scroll{ overflow-x:auto; margin-top:10px; }
+  .riesgo-chip{ font-size:11px; font-weight:700; padding:3px 10px; border-radius:100px; text-transform:uppercase; }
+
+  .yoy-shell{ display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:10px; }
+  .yoy-cards{ display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:12px; margin-top:14px; }
+
+  .subtab-bar{ display:flex; gap:4px; background:var(--surface-2); border:1px solid var(--border); border-radius:10px; padding:4px; width:max-content; margin-bottom:22px; flex-wrap:wrap; }
+  .subtab{ font-size:12px; font-weight:700; padding:7px 14px; border-radius:7px; border:none; background:transparent; color:var(--ink-2); cursor:pointer; white-space:nowrap; }
+  .subtab.active{ background:var(--surface); color:var(--accent); box-shadow:0 1px 3px var(--border); }
+  .subpanel{ display:none; }
+  .subpanel.active{ display:block; }
+
+  .month-legend{ display:flex; flex-wrap:wrap; gap:6px 14px; margin-top:12px; padding-top:12px; border-top:1px solid var(--border); font-size:11px; color:var(--ink-2); }
+  .month-legend span b{ font-family: ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; color:var(--ink); }
+
+  .hdr-lines{ font-size:11.5px; color:var(--ink-muted); margin-top:4px; }
+
+  .foot{ margin-top:28px; padding-top:16px; border-top:1px solid var(--border); font-size:11px; color:var(--ink-muted); display:flex; justify-content:space-between; gap:16px; flex-wrap:wrap; }
+
+  @media (max-width:980px){
+    .row2, .yoy-shell{ grid-template-columns:1fr; }
+    .month-shell{ grid-template-columns:1fr; }
+    .month-list{ border-right:none; border-bottom:1px solid var(--border); max-height:200px; }
+  }
+</style>
+
+<div class="wrap">
+
+  <div class="hdr">
+    <div>
+      <p class="hdr-eyebrow">Contraloría Inteligente GOH</p>
+      <h1>Auditoría de Inventarios Retail</h1>
+      <p class="hdr-lines" id="hdrLines"></p>
+    </div>
+    <div class="hdr-meta">
+      <div id="hdrCounts"></div>
+      <div id="hdrAsOf"></div>
+    </div>
+  </div>
+
+  <div class="ctrl">
+    <div class="ctrl-group"><label>Desde</label><input type="date" id="dateStart"></div>
+    <div class="ctrl-group"><label>Hasta</label><input type="date" id="dateEnd"></div>
+    <div class="ctrl-sep"></div>
+    <button class="preset" data-preset="all">Todo el histórico</button>
+    <button class="preset" data-preset="90d">Últimos 90 días</button>
+    <button class="preset" data-preset="6m">Últimos 6 meses</button>
+    <button class="preset" data-preset="ytd">2026 (YTD)</button>
+    <button class="preset" data-preset="py">2025 completo</button>
+    <span class="ctrl-count" id="rangeCount"></span>
+  </div>
+
+  <div class="view-toggle" role="tablist">
+    <button class="view-tab active" data-view="directorio" role="tab" aria-selected="true">Resumen Gerencial</button>
+    <button class="view-tab" data-view="operativa" role="tab" aria-selected="false">Vista Operativa</button>
+  </div>
+
+  <div id="viewDirectorio">
+
+  <div class="sec-title"><span class="accent-bar"></span>Indicadores clave del período</div>
+  <div class="kpi-grid" id="kpiGrid"></div>
+
+  <div class="sec-title"><span class="accent-bar"></span>Faltante y exposición por línea</div>
+  <div class="row2">
+    <div class="card">
+      <div class="card-hd"><h3>Faltante detectado (costo)</h3><span class="card-note">por mes · USD</span></div>
+      <div class="chart-wrap"><div class="chart-box" id="chartMonto"></div></div>
+      <div class="month-legend" id="chartMontoLegend"></div>
+    </div>
+    <div class="card">
+      <div class="card-hd"><h3>Exposición de faltante por línea</h3><span class="card-note">a cobrar (costo)</span></div>
+      <div class="chart-wrap"><div class="chart-box" id="chartLinea"></div></div>
+    </div>
+  </div>
+
+  <div class="sec-title"><span class="accent-bar"></span>Ranking de faltantes por tienda y línea</div>
+  <p class="sec-note">Ordenado por faltante acumulado (costo) en el período; reincidencia = n.º de auditorías con faltante detectado en esa combinación tienda-línea. Excluye tiendas cerradas.</p>
+  <div class="card">
+    <div class="select-row" style="margin:0 0 4px;">
+      <button class="preset topn-btn active" data-topn="5">Top 5</button>
+      <button class="preset topn-btn" data-topn="10">Top 10</button>
+      <button class="preset topn-btn" data-topn="all">Todo</button>
+    </div>
+    <div class="table-scroll"><table class="dtable" id="tblFaltanteLinea"></table></div>
+  </div>
+
+  <div class="card card-compact">
+    <div class="card-hd"><h3 class="h3-quiet">Tiendas cerradas en el período</h3><span class="card-note">hoja Tiendas</span></div>
+    <div id="tiendasCerradasBox"></div>
+  </div>
+
+  <div class="sec-title"><span class="accent-bar"></span>Actividad de auditoría</div>
+  <div class="row2">
+    <div class="card">
+      <div class="card-hd"><h3>Auditorías realizadas</h3><span class="card-note">por mes</span></div>
+      <div class="trend-stat-row" id="chartCountStats"></div>
+      <div class="chart-wrap"><div class="chart-box" id="chartCount"></div></div>
+      <div class="month-legend" id="chartCountLegend"></div>
+    </div>
+    <div class="card">
+      <div class="card-hd"><h3>Auditorías por línea de negocio</h3><span class="card-note">acumulado en el período seleccionado</span></div>
+      <div class="chart-wrap"><div class="chart-box" id="chartLineaCount"></div></div>
+    </div>
+  </div>
+
+  <div class="sec-title"><span class="accent-bar"></span>Comparativo interanual</div>
+  <p class="sec-note">Usa todo el histórico disponible (no depende del filtro de fechas de arriba) para comparar el mismo mes entre años.</p>
+  <div class="card">
+    <div class="yoy-shell">
+      <div>
+        <div class="card-hd"><h3>Faltante detectado (costo) por mes</h3></div>
+        <div class="chart-wrap"><div class="chart-box" id="chartYoyMonto"></div></div>
+        <div class="legend" id="yoyLegendMonto"></div>
+      </div>
+      <div>
+        <div class="card-hd"><h3>N.º de auditorías por mes</h3></div>
+        <div class="chart-wrap"><div class="chart-box" id="chartYoyCount"></div></div>
+        <div class="legend" id="yoyLegendCount"></div>
+      </div>
+    </div>
+    <div class="yoy-cards" id="yoyCards"></div>
+  </div>
+
+  <div class="sec-title"><span class="accent-bar"></span>Exposición por sociedad y zona</div>
+  <p class="sec-note">% Merma = faltante detectado ÷ inventario auditado (acumulado del período). Referencia de mercado retail: 1.0–1.5%.</p>
+  <div class="row2">
+    <div class="card">
+      <div class="card-hd"><h3>Por sociedad</h3></div>
+      <div class="chart-wrap"><div class="chart-box" id="chartSociedad"></div></div>
+    </div>
+    <div class="card">
+      <div class="card-hd"><h3>Por zona</h3></div>
+      <div class="chart-wrap"><div class="chart-box" id="chartZona"></div></div>
+    </div>
+  </div>
+
+  <div class="sec-title"><span class="accent-bar"></span>Tiendas prioritarias</div>
+  <p class="sec-note">Ranking = score de la última auditoría + 15 pts por cada reincidencia en alto/crítico dentro del período + hasta 40 pts por monto pendiente de cobro. Excluye tiendas cerradas (cruce con hoja Tiendas) — no tiene sentido priorizar intervención donde ya no hay operación. No sustituye criterio de auditoría, es una guía de dónde mirar primero.</p>
+  <div class="card">
+    <div class="table-scroll"><table class="dtable" id="tblPrioridad"></table></div>
+  </div>
+
+  </div><!-- /viewDirectorio -->
+
+  <div id="viewOperativa" style="display:none">
+
+  <div class="subtab-bar" role="tablist">
+    <button class="subtab active" data-subtab="tienda" role="tab" aria-selected="true">Historial de tienda</button>
+    <button class="subtab" data-subtab="mensual" role="tab" aria-selected="false">Auditorías realizadas por mes</button>
+    <button class="subtab" data-subtab="kpiaud" role="tab" aria-selected="false">KPI Auditores</button>
+    <button class="subtab" data-subtab="skus" role="tab" aria-selected="false">Análisis de SKUs con diferencias</button>
+    <button class="subtab" data-subtab="pendientes" role="tab" aria-selected="false">Próximas auditorías</button>
+  </div>
+
+  <!-- ===== Sub-pestaña: Historial de tienda ===== -->
+  <div class="subpanel active" id="subpanel-tienda">
+    <p class="sec-note">Escoge línea de negocio y tienda para ver su historial de auditorías <b>dentro del período seleccionado arriba</b>. Incluye tiendas cerradas, para revisión histórica.</p>
+    <div class="tienda-shell">
+      <div class="card">
+        <div class="select-row">
+          <select id="selLinea"></select>
+          <select id="selTienda"></select>
+          <span id="tiendaStatus"></span>
+        </div>
+        <div class="kpi-grid" id="tiendaKpis" style="margin-top:14px;"></div>
+        <div class="row2" style="margin-top:16px;">
+          <div>
+            <div class="card-hd"><h3>Evolución por auditoría</h3></div>
+            <div class="chart-wrap"><div class="chart-box" id="chartTiendaHist"></div></div>
+          </div>
+          <div>
+            <div class="card-hd"><h3>Composición de diferencias (costo)</h3></div>
+            <div id="tiendaComposicion" style="margin-top:10px;"></div>
+          </div>
+        </div>
+        <div class="card-hd" style="margin-top:16px;"><h3>Historial en el período</h3></div>
+        <div class="table-scroll"><table class="dtable" id="tblTiendaHist"></table></div>
+      </div>
+      <div>
+        <div class="card" style="margin-bottom:16px;">
+          <div class="card-hd"><h3>Mayor riesgo</h3></div>
+          <span class="card-note">en el período seleccionado · clic para abrir</span>
+          <div id="tiendaRiesgoLateral" style="margin-top:10px;"></div>
+        </div>
+        <div class="card">
+          <div class="card-hd"><h3>Tiendas reincidentes</h3></div>
+          <span class="card-note">riesgo alto/crítico, 2+ veces en el período</span>
+          <div id="reincidentes" style="margin-top:8px;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Sub-pestaña: Auditorías realizadas por mes ===== -->
+  <div class="subpanel" id="subpanel-mensual">
+    <div class="kpi-grid" id="mensualKpis" style="margin-bottom:16px;"></div>
+    <p class="sec-note">Selecciona un mes para ver el detalle de cada auditoría registrada.</p>
+    <div class="card">
+      <div class="month-shell">
+        <div class="month-list" id="monthList"></div>
+        <div class="month-detail" id="monthDetail"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Sub-pestaña: KPI Auditores ===== -->
+  <div class="subpanel" id="subpanel-kpiaud">
+    <div class="card" style="margin-bottom:16px;">
+      <div class="card-hd"><h3>Carga de auditorías por auditor</h3><span class="card-note">período seleccionado arriba</span></div>
+      <div class="chart-wrap"><div class="chart-box" id="chartAuditor"></div></div>
+      <div class="card-note" id="auditorNote" style="margin-top:10px;"></div>
+    </div>
+
+    <p class="sec-note">Escoge tipo de auditor, auditor y período (independiente del filtro de fecha de arriba) para ver qué tiendas auditó — soporte para el cálculo de su KPI. La meta es editable porque no todos los auditores tienen el mismo objetivo mensual. Tipo de auditor viene de la hoja "Correos auditores" del Excel.</p>
+    <div class="card">
+      <div class="select-row">
+        <select id="kpiAudTipo"></select>
+        <select id="kpiAudSel"></select>
+        <label style="font-size:11px;color:var(--ink-muted);font-weight:600;text-transform:uppercase;letter-spacing:.03em;">Desde</label>
+        <input type="date" id="kpiAudStart">
+        <label style="font-size:11px;color:var(--ink-muted);font-weight:600;text-transform:uppercase;letter-spacing:.03em;">Hasta</label>
+        <input type="date" id="kpiAudEnd">
+        <label style="font-size:11px;color:var(--ink-muted);font-weight:600;text-transform:uppercase;letter-spacing:.03em;">Meta mensual</label>
+        <input type="number" id="kpiAudMeta" min="1" value="12" style="width:64px;font-size:12.5px;padding:5px 8px;border-radius:7px;border:1px solid var(--border);background:var(--surface-2);color:var(--ink);">
+      </div>
+
+      <div id="kpiAudIndividual">
+        <div class="kpi-grid" id="kpiAudSummary" style="margin-top:14px;"></div>
+        <div class="card-hd" style="margin-top:16px;"><h3>Tiendas auditadas en el período</h3></div>
+        <div class="table-scroll"><table class="dtable" id="kpiAudTable"></table></div>
+      </div>
+
+      <div id="kpiAudGrupo" style="display:none;">
+        <div class="kpi-grid" id="kpiAudGrupoSummary" style="margin-top:14px;"></div>
+        <div class="card-hd" style="margin-top:16px;"><h3>Cumplimiento por auditor del tipo seleccionado</h3></div>
+        <div class="table-scroll"><table class="dtable" id="kpiAudGrupoTable"></table></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Sub-pestaña: Análisis de SKUs con diferencias ===== -->
+  <div class="subpanel" id="subpanel-skus">
+    <p class="sec-note" id="skuRangeNote"></p>
+    <div class="kpi-grid" id="skuKpis" style="margin-bottom:16px;"></div>
+    <div class="row2">
+      <div class="card">
+        <div class="card-hd"><h3>Top 15 SKUs — Mayor faltante (costo)</h3></div>
+        <div class="chart-wrap"><div class="chart-box" id="chartSkuFaltante"></div></div>
+      </div>
+      <div class="card">
+        <div class="card-hd"><h3>Top 15 SKUs — Mayor reincidencia</h3><span class="card-note">n.º de auditorías distintas con faltante</span></div>
+        <div class="chart-wrap"><div class="chart-box" id="chartSkuReinc"></div></div>
+      </div>
+    </div>
+    <div class="row2">
+      <div class="card">
+        <div class="card-hd"><h3>Caducados</h3></div>
+        <div class="card-note" id="caducadosHead"></div>
+        <div class="table-scroll"><table class="dtable" id="tblCaducados"></table></div>
+      </div>
+      <div class="card">
+        <div class="card-hd"><h3>Mal estado</h3></div>
+        <div class="card-note" id="malEstadoHead"></div>
+        <div class="table-scroll"><table class="dtable" id="tblMalEstado"></table></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-hd"><h3>Distribución por tipo de hallazgo</h3></div>
+      <div class="chart-wrap"><div class="chart-box" id="chartSkuTipo"></div></div>
+    </div>
+  </div>
+
+  <!-- ===== Sub-pestaña: Próximas auditorías ===== -->
+  <div class="subpanel" id="subpanel-pendientes">
+    <p class="sec-note" id="pendientesNote"></p>
+    <div class="kpi-grid" id="pendientesKpis" style="margin-bottom:16px;"></div>
+    <div class="card">
+      <div class="card-hd"><h3>Tiendas a priorizar en el siguiente período</h3><span class="card-note">ordenadas por días sin auditar — las nunca auditadas van primero</span></div>
+      <div class="table-scroll"><table class="dtable" id="tblPendientes"></table></div>
+    </div>
+  </div>
+
+  </div><!-- /viewOperativa -->
+
+  <div class="foot">
+    <span id="footSource">Fuente: Historico_auditorias_retail.xlsx. Score de riesgo según metodología GOH: C1 % variación/inventario (40) + C2 monto a cobrar PVP (30) + C3 reincidencia (15) + C4 tendencia (10) + C5 hallazgos cualitativos (5).</span>
+    <span id="footAsOf"></span>
+  </div>
+
+</div>
+
+<script>
+(function(){
+/*__DATA__*/
+
+  // ============ helpers ============
+  const MES_ABR = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+  const RIESGO_COLOR = ['var(--good)','var(--warning)','var(--serious)','var(--critical)'];
+  function fmtUSD(v){ const s = v<0?'-':''; return s+'$'+Math.round(Math.abs(v)).toLocaleString('en-US'); }
+  function fmtUSDk(v){ const s = v<0?'-':''; const a = Math.abs(v);
+    if(a>=1000000) return s+'$'+(a/1000000).toFixed(1)+'M';
+    return s+'$'+(a/1000).toFixed(1)+'K'; }
+  function monthKey(d){ return d.slice(0,7); }
+  function monthLabel(key){ const p=key.split('-'); return MES_ABR[parseInt(p[1],10)-1]+'-'+p[0].slice(2); }
+  function addDays(dstr,n){ const d=new Date(dstr+'T00:00:00'); d.setDate(d.getDate()+n); return d.toISOString().slice(0,10); }
+  function addMonths(dstr,n){ const d=new Date(dstr+'T00:00:00'); d.setMonth(d.getMonth()+n); return d.toISOString().slice(0,10); }
+  function dayDiff(a,b){ return Math.round((new Date(b+'T00:00:00')-new Date(a+'T00:00:00'))/86400000); }
+  function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+  function fmtDateHuman(d){ const p=d.split('-'); return p[2]+' '+MES_ABR[parseInt(p[1],10)-1]+' '+p[0]; }
+
+  function makeTooltip(container){
+    let tip = container.querySelector(':scope > .tooltip');
+    if(!tip){
+      tip = document.createElement('div'); tip.className='tooltip';
+      container.style.position = container.style.position || 'relative';
+      container.appendChild(tip);
+    }
+    return {
+      show(x,y,html){ tip.innerHTML=html; tip.style.left=x+'px'; tip.style.top=(y-10)+'px'; tip.style.opacity=1; },
+      hide(){ tip.style.opacity=0; }
+    };
+  }
+
+  function attachHover(box, rows, tooltipFmt, selector){
+    if(!tooltipFmt) return;
+    const svgEl = box.querySelector('svg');
+    const wrap = box.closest('.chart-wrap') || box;
+    const tip = makeTooltip(wrap);
+    svgEl.querySelectorAll(selector||'.bar,.dot').forEach(el=>{
+      el.addEventListener('mouseenter', ()=>{
+        const i = +el.dataset.i;
+        const r = el.getBoundingClientRect(); const bx = wrap.getBoundingClientRect();
+        tip.show(r.left+r.width/2-bx.left, r.top-bx.top, tooltipFmt(rows[i]));
+      });
+      el.addEventListener('mouseleave', ()=>tip.hide());
+    });
+  }
+
+  // ranked list — HTML bars instead of SVG text, so long labels truncate
+  // cleanly (ellipsis) instead of overflowing/overlapping neighbouring rows.
+  function rankedList(box, rows, opts){
+    opts = opts || {};
+    const valueFmt = opts.valueFmt || (v=>v);
+    const colorFor = opts.colorFor || (()=>'var(--accent)');
+    if(!rows.length){ box.innerHTML = '<div class="card-note">Sin datos en el rango seleccionado.</div>'; return; }
+    const mx = opts.maxV!=null ? opts.maxV : Math.max(...rows.map(r=>Math.abs(r.value)),1);
+    box.innerHTML = '<div class="rlist">' + rows.map((r,i)=>`
+      <div class="rlist-row" data-i="${i}">
+        <div class="rlist-rank">${i+1}</div>
+        <div class="rlist-mid">
+          <div class="rlist-label" title="${escapeHtml(r.label)}">${escapeHtml(r.label)}</div>
+          <div class="rlist-track"><div class="rlist-fill" style="width:${Math.max(Math.abs(r.value)/mx*100,2)}%;background:${colorFor(r,i)}"></div></div>
+        </div>
+        <div class="rlist-value num">${valueFmt(r.value)}</div>
+      </div>`).join('') + '</div>';
+    if(opts.tooltipFmt){
+      const wrap = box.closest('.chart-wrap') || box;
+      const tip = makeTooltip(wrap);
+      box.querySelectorAll('.rlist-row').forEach(el=>{
+        el.addEventListener('mouseenter', ()=>{
+          const i = +el.dataset.i;
+          const r = el.getBoundingClientRect(); const bx = wrap.getBoundingClientRect();
+          tip.show(r.left+r.width/2-bx.left, r.top-bx.top, opts.tooltipFmt(rows[i]));
+        });
+        el.addEventListener('mouseleave', ()=>tip.hide());
+      });
+    }
+  }
+
+  // ============ generic chart builders ============
+  function hBarChart(box, rows, opts){
+    opts = opts || {};
+    const W=opts.W||640, PR=opts.PR||82;
+    const valueFmt = opts.valueFmt || (v=>v);
+    const colorFor = opts.colorFor || (()=>'var(--accent)');
+    if(!rows.length){ box.innerHTML = '<div class="card-note">Sin datos en el rango seleccionado.</div>'; return; }
+    // fitH: fit the row height to hit a target total height regardless of
+    // row count — used to make two charts paired side-by-side (different
+    // row counts) read as the same size instead of hand-tuning each.
+    let gap = opts.gap||10, rowH = opts.rowH||34;
+    if(opts.fitH){
+      gap = Math.min(gap, 8);
+      rowH = Math.max(18, (opts.fitH-(rows.length-1)*gap)/rows.length);
+    }
+    // left padding derived from the longest label — one rule for every
+    // ranking chart instead of a hand-tuned PL per call site.
+    const PL = opts.PL || Math.min(240, Math.max(74, 24 + Math.max(...rows.map(r=>r.label.length))*7.2));
+    const H = rows.length*(rowH+gap)-gap;
+    const iw = W-PL-PR;
+    const mx = opts.maxV!=null ? opts.maxV : Math.max(...rows.map(r=>Math.abs(r.value)),1);
+    let svg='';
+    rows.forEach((r,i)=>{
+      const yTop = i*(rowH+gap);
+      const bw = Math.max(iw*Math.abs(r.value)/mx, 2);
+      svg += `<text class="cat-lbl" x="${PL-10}" y="${yTop+rowH/2+4}" text-anchor="end">${escapeHtml(r.label)}</text>`;
+      svg += `<rect x="${PL}" y="${yTop+3}" width="${iw}" height="${rowH-6}" rx="4" fill="var(--surface-2)" />`;
+      svg += `<rect class="bar" data-i="${i}" x="${PL}" y="${yTop+3}" width="${bw}" height="${rowH-6}" rx="4" fill="${colorFor(r,i)}" />`;
+      svg += `<text class="val-lbl" x="${PL+iw+8}" y="${yTop+rowH/2+4}">${valueFmt(r.value)}</text>`;
+    });
+    box.innerHTML = `<svg class="chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">${svg}</svg>`;
+    attachHover(box, rows, opts.tooltipFmt, '.bar');
+  }
+
+  function vBarChart(box, points, opts){
+    opts = opts || {};
+    const W=opts.W||640,H=opts.H||170,PL=opts.PL||44,PR=opts.PR||14,PT=18,PB=28;
+    const iw=W-PL-PR, ih=H-PT-PB;
+    if(!points.length){ box.innerHTML = '<div class="card-note">Sin datos en el rango seleccionado.</div>'; return; }
+    const mx = opts.maxV!=null?opts.maxV:Math.max(...points.map(p=>p.value),1);
+    const gap = iw/points.length, bw = gap*0.62;
+    const xC = i => PL+gap*i+gap/2;
+    const y = v => PT+ih-(ih*v/mx);
+    let grid=''; const steps=opts.gridSteps||4;
+    for(let s=0;s<=steps;s++){ const g=mx*s/steps; grid+=`<line class="grid-line" x1="${PL}" x2="${W-PR}" y1="${y(g)}" y2="${y(g)}" />`; grid+=`<text class="axis-lbl" x="0" y="${y(g)+3}">${opts.axisFmt?opts.axisFmt(g):Math.round(g)}</text>`; }
+    let bars='', xLbls='', valLbls='';
+    const everyN = points.length>16?2:1;
+    points.forEach((p,i)=>{
+      const bh = ih-(y(p.value)-PT);
+      const fill = opts.colorFor ? opts.colorFor(p,i) : (opts.color||'var(--seq-400)');
+      bars += `<rect class="bar" data-i="${i}" x="${xC(i)-bw/2}" y="${y(p.value)}" width="${bw}" height="${Math.max(bh,0)}" rx="3" fill="${fill}" />`;
+      if(opts.valueLabels) valLbls += `<text class="val-lbl" x="${xC(i)}" y="${y(p.value)-5}" text-anchor="middle" style="font-size:8.5px;">${p.value}</text>`;
+      if(i%everyN===0 || i===points.length-1) xLbls += `<text class="axis-lbl" x="${xC(i)}" y="${H-4}" text-anchor="middle">${p.label}</text>`;
+    });
+    let refLine = '';
+    if(opts.refLine!=null){
+      refLine = `<line x1="${PL}" x2="${W-PR}" y1="${y(opts.refLine)}" y2="${y(opts.refLine)}" stroke="var(--ink-muted)" stroke-width="1.2" stroke-dasharray="4 3" />`;
+    }
+    box.innerHTML = `<svg class="chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">${grid}${bars}${refLine}${valLbls}${xLbls}</svg>`;
+    attachHover(box, points, opts.tooltipFmt, '.bar');
+  }
+
+
+  const YEAR_COLORS = ['var(--cat-1)','var(--cat-2)','var(--cat-3)'];
+  function multiLineChart(box, series, categories, opts){
+    opts = opts || {};
+    const W=opts.W||640,H=opts.H||170,PL=opts.PL||44,PR=opts.PR||14,PT=18,PB=28;
+    const iw=W-PL-PR, ih=H-PT-PB;
+    const allVals = series.flatMap(s=>s.values.filter(v=>v!=null));
+    const mx = opts.maxV!=null?opts.maxV:Math.max(...allVals,1);
+    const x = i => PL+(iw*i/Math.max(categories.length-1,1));
+    const y = v => PT+ih-(ih*v/mx);
+    let grid=''; const steps=opts.gridSteps||4;
+    for(let s=0;s<=steps;s++){ const g=mx*s/steps; grid+=`<line class="grid-line" x1="${PL}" x2="${W-PR}" y1="${y(g)}" y2="${y(g)}" />`; grid+=`<text class="axis-lbl" x="0" y="${y(g)+3}">${opts.axisFmt?opts.axisFmt(g):Math.round(g)}</text>`; }
+    let xLbls=''; categories.forEach((c,i)=>{ xLbls += `<text class="axis-lbl" x="${x(i)}" y="${H-4}" text-anchor="middle">${c}</text>`; });
+    let lines='';
+    series.forEach((s,si)=>{
+      const segs = [];
+      let cur = [];
+      s.values.forEach((v,i)=>{
+        if(v==null){ if(cur.length){segs.push(cur); cur=[];} return; }
+        cur.push(`${x(i)},${y(v)}`);
+      });
+      if(cur.length) segs.push(cur);
+      segs.forEach(seg=>{ lines += `<polyline points="${seg.join(' ')}" fill="none" stroke="${s.color}" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" />`; });
+      s.values.forEach((v,i)=>{ if(v!=null) lines += `<circle class="dot" data-s="${si}" data-i="${i}" cx="${x(i)}" cy="${y(v)}" r="3" fill="${s.color}" />`; });
+    });
+    box.innerHTML = `<svg class="chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">${grid}${lines}${xLbls}</svg>`;
+    if(opts.tooltipFmt){
+      const svgEl = box.querySelector('svg');
+      const wrap = box.closest('.chart-wrap') || box;
+      const tip = makeTooltip(wrap);
+      svgEl.querySelectorAll('.dot').forEach(el=>{
+        el.addEventListener('mouseenter', ()=>{
+          const si=+el.dataset.s, i=+el.dataset.i;
+          const r = el.getBoundingClientRect(); const bx = wrap.getBoundingClientRect();
+          tip.show(r.left-bx.left, r.top-bx.top, opts.tooltipFmt(series[si], categories[i], series[si].values[i]));
+        });
+        el.addEventListener('mouseleave', ()=>tip.hide());
+      });
+    }
+  }
+
+  function groupedBarChart(box, series, categories, opts){
+    opts = opts || {};
+    const W=opts.W||640,H=opts.H||170,PL=opts.PL||44,PR=opts.PR||14,PT=18,PB=28;
+    const iw=W-PL-PR, ih=H-PT-PB;
+    const allVals = series.flatMap(s=>s.values.map(v=>v||0));
+    const mx = opts.maxV!=null?opts.maxV:Math.max(...allVals,1);
+    const groupW = iw/categories.length;
+    const barW = Math.min(14, groupW/(series.length+1.4));
+    const y = v => PT+ih-(ih*v/mx);
+    let grid=''; const steps=opts.gridSteps||4;
+    for(let s=0;s<=steps;s++){ const g=mx*s/steps; grid+=`<line class="grid-line" x1="${PL}" x2="${W-PR}" y1="${y(g)}" y2="${y(g)}" />`; grid+=`<text class="axis-lbl" x="0" y="${y(g)+3}">${Math.round(g)}</text>`; }
+    let bars='', xLbls='';
+    categories.forEach((c,ci)=>{
+      const groupX = PL+groupW*ci;
+      const totalW = barW*series.length;
+      const startX = groupX+groupW/2-totalW/2;
+      series.forEach((s,si)=>{
+        const v = s.values[ci]||0;
+        const bx = startX+si*barW;
+        const bh = ih-(y(v)-PT);
+        bars += `<rect class="bar" data-s="${si}" data-i="${ci}" x="${bx}" y="${y(v)}" width="${barW-1.5}" height="${Math.max(bh,0)}" rx="2" fill="${s.color}" />`;
+      });
+      xLbls += `<text class="axis-lbl" x="${groupX+groupW/2}" y="${H-4}" text-anchor="middle">${c}</text>`;
+    });
+    box.innerHTML = `<svg class="chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">${grid}${bars}${xLbls}</svg>`;
+    if(opts.tooltipFmt){
+      const svgEl = box.querySelector('svg');
+      const wrap = box.closest('.chart-wrap') || box;
+      const tip = makeTooltip(wrap);
+      svgEl.querySelectorAll('.bar').forEach(el=>{
+        el.addEventListener('mouseenter', ()=>{
+          const si=+el.dataset.s, ci=+el.dataset.i;
+          const r = el.getBoundingClientRect(); const bx = wrap.getBoundingClientRect();
+          tip.show(r.left+r.width/2-bx.left, r.top-bx.top, opts.tooltipFmt(series[si], categories[ci], series[si].values[ci]));
+        });
+        el.addEventListener('mouseleave', ()=>tip.hide());
+      });
+    }
+  }
+
+  // ============ header/footer meta (dynamic — regenerate to refresh these) ============
+  document.getElementById('hdrCounts').textContent =
+    DATA.coverage.nActivas+' tiendas activas · '+DATA.auditors.length+' auditores · '+DATA.sociedades.length+' sociedades';
+  document.getElementById('hdrAsOf').textContent = 'Corte de datos: '+fmtDateHuman(DATA.asOf);
+  document.getElementById('footAsOf').textContent = 'Corte de datos: '+fmtDateHuman(DATA.asOf);
+  document.getElementById('footSource').textContent =
+    'Fuente: Historico_auditorias_retail.xlsx — Registro_Auditorias ('+DATA.audits.length+' filas), Detalle_SKUs ('+DATA.skus.length+' filas) y Tiendas. '+
+    'Score de riesgo según metodología GOH: C1 % variación/inventario (40) + C2 monto a cobrar PVP (30) + C3 reincidencia (15) + C4 tendencia (10) + C5 hallazgos cualitativos (5).';
+
+  // ============ state ============
+  const allDates = DATA.audits.map(r=>r[0]);
+  const MIN_DATE = allDates.reduce((a,b)=>a<b?a:b);
+  const MAX_DATE = allDates.reduce((a,b)=>a>b?a:b);
+  const dateStartEl = document.getElementById('dateStart');
+  const dateEndEl = document.getElementById('dateEnd');
+  dateStartEl.min = MIN_DATE; dateStartEl.max = MAX_DATE;
+  dateEndEl.min = MIN_DATE; dateEndEl.max = MAX_DATE;
+  dateStartEl.value = MIN_DATE; dateEndEl.value = MAX_DATE;
+  let selectedMonth = null;
+
+  document.querySelectorAll('.preset:not(.topn-btn)').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      document.querySelectorAll('.preset:not(.topn-btn)').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      const p = btn.dataset.preset;
+      if(p==='all'){ dateStartEl.value=MIN_DATE; dateEndEl.value=MAX_DATE; }
+      else if(p==='90d'){ dateEndEl.value=MAX_DATE; dateStartEl.value = addDays(MAX_DATE,-90) < MIN_DATE ? MIN_DATE : addDays(MAX_DATE,-90); }
+      else if(p==='6m'){ dateEndEl.value=MAX_DATE; dateStartEl.value = addMonths(MAX_DATE,-6) < MIN_DATE ? MIN_DATE : addMonths(MAX_DATE,-6); }
+      else if(p==='ytd'){ dateStartEl.value='2026-01-01'; dateEndEl.value=MAX_DATE; }
+      else if(p==='py'){ dateStartEl.value='2025-01-01'; dateEndEl.value='2025-12-31'; }
+      selectedMonth = null;
+      applyFilters();
+    });
+  });
+  dateStartEl.addEventListener('change', ()=>{ document.querySelectorAll('.preset:not(.topn-btn)').forEach(b=>b.classList.remove('active')); selectedMonth=null; applyFilters(); });
+  dateEndEl.addEventListener('change', ()=>{ document.querySelectorAll('.preset:not(.topn-btn)').forEach(b=>b.classList.remove('active')); selectedMonth=null; applyFilters(); });
+
+  document.querySelectorAll('.topn-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      document.querySelectorAll('.topn-btn').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      faltanteLineaTopN = btn.dataset.topn==='all' ? 'all' : parseInt(btn.dataset.topn,10);
+      renderFaltanteLinea(lastFilteredAudits);
+    });
+  });
+
+  document.querySelectorAll('.view-tab').forEach(tab=>{
+    tab.addEventListener('click', ()=>{
+      document.querySelectorAll('.view-tab').forEach(t=>{ t.classList.remove('active'); t.setAttribute('aria-selected','false'); });
+      tab.classList.add('active'); tab.setAttribute('aria-selected','true');
+      const v = tab.dataset.view;
+      document.getElementById('viewDirectorio').style.display = v==='directorio' ? '' : 'none';
+      document.getElementById('viewOperativa').style.display = v==='operativa' ? '' : 'none';
+    });
+  });
+
+  document.querySelectorAll('.subtab').forEach(tab=>{
+    tab.addEventListener('click', ()=>{
+      document.querySelectorAll('.subtab').forEach(t=>{ t.classList.remove('active'); t.setAttribute('aria-selected','false'); });
+      tab.classList.add('active'); tab.setAttribute('aria-selected','true');
+      document.querySelectorAll('.subpanel').forEach(p=>p.classList.remove('active'));
+      document.getElementById('subpanel-'+tab.dataset.subtab).classList.add('active');
+    });
+  });
+
+  // header: lista de líneas de negocio incluidas en la matriz
+  document.getElementById('hdrLines').textContent = 'Líneas incluidas: ' + DATA.lines.join(' · ');
+
+  function applyFilters(){
+    const start = dateStartEl.value, end = dateEndEl.value;
+    const fa = DATA.audits.filter(r=> r[0]>=start && r[0]<=end);
+    const fs = DATA.skus.filter(r=> r[0]>=start && r[0]<=end);
+    document.getElementById('rangeCount').innerHTML = '<b class="num">'+fa.length+'</b> auditorías en el rango &nbsp;·&nbsp; '+fmtDateHuman(start)+' — '+fmtDateHuman(end);
+    renderKPIs(fa);
+    renderMontoTrend(fa);
+    renderCountTrend(fa);
+    renderYoY();
+    renderLineExposure(fa);
+    renderFaltanteLinea(fa);
+    renderLineaCounts(fa);
+    renderSociedad(fa);
+    renderZona(fa);
+    renderPrioridad(fa);
+    renderTiendasCerradas(start, end);
+    renderMonthMenu(fa);
+    renderMensualKpis(fa);
+    renderAuditorLoad(fa);
+    renderReincidentes(fa);
+    renderSkuSection(fs);
+    renderTiendaHistorial(fa);
+  }
+
+  // ============ KPIs ============
+  function computeKPIs(fa){
+    const n = fa.length;
+    const scoreAvg = n ? fa.reduce((s,r)=>s+r[5],0)/n : 0;
+    const nAC = fa.filter(r=>r[6]>=2).length;
+    const detectadoRows = fa.filter(r=>r[8]<0);
+    const detectado = -detectadoRows.reduce((s,r)=>s+r[8],0);
+    const cobradoTotal = fa.reduce((s,r)=>s+r[9],0);
+    const netACobrar = fa.reduce((s,r)=>s+r[8],0);
+    const pctRecOficial = netACobrar!==0 ? (cobradoTotal/Math.abs(netACobrar)*100) : 0;
+    const pendRows = fa.filter(r=>DATA.estados[r[10]]==='Pendiente');
+    const pendMonto = pendRows.reduce((s,r)=>s+Math.max(-r[8],0),0);
+    const invTotal = fa.reduce((s,r)=>s+r[7],0);
+    const shrinkPct = invTotal>0 ? detectado/invTotal*100 : 0;
+    return {n, scoreAvg, nAC, pctAC: n?nAC/n*100:0, detectado, nDetectado:detectadoRows.length, cobradoTotal, pctRecOficial, pendMonto, pendN:pendRows.length, invTotal, shrinkPct};
+  }
+
+  function auditorConcentration(fa){
+    const byAud = {};
+    fa.forEach(r=>{ byAud[r[4]] = (byAud[r[4]]||0)+1; });
+    const arr = Object.entries(byAud).map(([idx,n])=>({idx:+idx,n})).sort((a,b)=>b.n-a.n);
+    const top3 = arr.slice(0,3).reduce((s,x)=>s+x.n,0);
+    return { pct: fa.length? top3/fa.length*100 : 0, list: arr };
+  }
+
+  function renderKpiGroup(elId, cards){
+    document.getElementById(elId).innerHTML = cards.map(c=>{
+      const toneVar = c.tone==='good' ? 'var(--ink-good)' : c.tone==='warning' ? 'var(--ink-warning)' : c.tone==='critical' ? 'var(--ink-critical)' : 'var(--ink)';
+      return `
+      <div class="kpi" style="--stripe:${toneVar}">
+        <div class="kpi-label">${c.label}</div>
+        <div class="kpi-value num" style="--tone:${toneVar}">${c.value}</div>
+        <div class="kpi-sub">${c.sub}</div>
+      </div>`;
+    }).join('');
+  }
+
+  function renderKPIs(fa){
+    const k = computeKPIs(fa);
+    const cov = DATA.coverage;
+    const cycleDays = avgAuditCycle(fa);
+    const cycleMonths = cycleDays!=null ? cycleDays/30.44 : null;
+
+    renderKpiGroup('kpiGrid', [
+      { label:'Auditorías en el período', value:k.n.toLocaleString('en-US'), sub:new Set(fa.map(r=>r[1])).size+' tiendas visitadas', tone:'neutral' },
+      { label:'Monto auditado', value:fmtUSD(k.invTotal), sub:'inventario cubierto en el período', tone:'neutral' },
+      { label:'Faltante detectado (costo)', value:fmtUSD(k.detectado), sub:k.nDetectado+' auditorías con faltante neto en el período', tone:'neutral' },
+      { label:'% Merma', value:k.shrinkPct.toFixed(2)+'%', sub:'faltante sobre inventario auditado · referencia de mercado 1.0–1.5%', tone: k.shrinkPct>1?'warning':'good' },
+      { label:'% Recuperado', value:k.pctRecOficial.toFixed(1)+'%', sub:fmtUSD(k.cobradoTotal)+' cobrados de '+k.pendN+' casos pendientes de gestión', tone: k.pctRecOficial<20?'critical':'good' },
+      { label:'Cobertura de tiendas activas', value:cov.p90+'%', sub:cov.n90+' de '+cov.nActivas+' en ≤90 días (hoy) · '+cov.p180+'% en ≤180d', tone: cov.p90>=90?'good':'warning' },
+      { label:'% en riesgo alto/crítico', value:k.pctAC.toFixed(1)+'%', sub:k.nAC+' de '+k.n+' auditorías · score prom. '+k.scoreAvg.toFixed(1), tone: k.pctAC>15?'warning':'good' },
+      { label:'Ciclo promedio entre auditorías', value: cycleMonths!=null ? cycleMonths.toFixed(1)+' meses' : 'N/D',
+        sub: cycleMonths!=null ? 'entre auditorías consecutivas de una misma tienda' : 'se necesitan ≥2 auditorías por tienda en el rango',
+        tone: cycleMonths!=null && cycleMonths>4 ? 'warning' : 'good' },
+    ]);
+  }
+
+  function groupBy(rows, keyFn, reducer){
+    const g = {};
+    rows.forEach(r=>{ const k = keyFn(r); if(!g[k]) g[k] = reducer.init(); reducer.add(g[k], r); });
+    Object.values(g).forEach(o=>reducer.finish&&reducer.finish(o));
+    return g;
+  }
+  const invShrink = {
+    init:()=>({n:0, inv:0, detectado:0, scoreSum:0, shrink:0}),
+    add:(o,r)=>{ o.n++; o.inv+=r[7]; o.scoreSum+=r[5]; if(r[8]<0) o.detectado += -r[8]; },
+    finish:(o)=>{ o.shrink = o.inv>0 ? o.detectado/o.inv*100 : 0; o.scoreAvg = o.n ? o.scoreSum/o.n : 0; }
+  };
+
+  function renderSociedad(fa){
+    const g = groupBy(fa, r=>r[13], invShrink);
+    const rows = Object.entries(g).map(([idx,o])=>({label:DATA.sociedades[idx], value:o.detectado, shrink:o.shrink, n:o.n}))
+      .sort((a,b)=>b.value-a.value);
+    hBarChart(document.getElementById('chartSociedad'), rows, {
+      colorFor:()=>'var(--seq-400)', valueFmt:fmtUSDk,
+      tooltipFmt:r=>`<b>${r.label}</b><br>${fmtUSD(r.value)} detectado · ${r.n} auditorías<br>Merma: <b>${r.shrink.toFixed(2)}%</b>`});
+  }
+  function renderZona(fa){
+    const g = groupBy(fa, r=>r[3], invShrink);
+    const rows = Object.entries(g).map(([idx,o])=>({label:DATA.zones[idx], value:o.detectado, shrink:o.shrink, n:o.n}))
+      .sort((a,b)=>b.value-a.value);
+    hBarChart(document.getElementById('chartZona'), rows, {
+      colorFor:()=>'var(--seq-400)', valueFmt:fmtUSDk,
+      tooltipFmt:r=>`<b>${r.label}</b><br>${fmtUSD(r.value)} detectado · ${r.n} auditorías<br>Merma: <b>${r.shrink.toFixed(2)}%</b>`});
+  }
+
+  function topPrioridad(fa, limit){
+    const byStore = {};
+    fa.forEach(r=>{
+      if(DATA.storesActive[r[1]] === false) return; // closed stores don't need intervention
+      if(!byStore[r[1]]) byStore[r[1]] = {last:null, reinc:0, pend:0};
+      const o = byStore[r[1]];
+      if(!o.last || r[0]>o.last[0]) o.last = r;
+      if(r[6]>=2) o.reinc++;
+      if(DATA.estados[r[10]]==='Pendiente') o.pend += Math.max(-r[8],0);
+    });
+    const rows = Object.entries(byStore).map(([idx,o])=>{
+      const score = o.last[5] + o.reinc*15 + Math.min(o.pend/50, 40);
+      return { label:DATA.stores[idx], score, lastScore:o.last[5], riesgo:DATA.riesgos[o.last[6]], reinc:o.reinc, pend:o.pend, lastDate:o.last[0], zone:DATA.zones[o.last[3]] };
+    }).sort((a,b)=>b.score-a.score);
+    return limit ? rows.slice(0,limit) : rows;
+  }
+  function renderPrioridad(fa){
+    const rows = topPrioridad(fa, 10);
+    const tbl = document.getElementById('tblPrioridad');
+    if(!rows.length){ tbl.innerHTML = '<tr><td class="card-note" style="padding:10px 0;">Sin datos en el rango seleccionado.</td></tr>'; return; }
+    let html = '<thead><tr><th>#</th><th>Tienda</th><th>Zona</th><th>Última auditoría</th><th>Riesgo</th><th class="num">Score</th><th class="num">Reincid.</th><th class="num">Pendiente cobro</th><th class="num">Prioridad</th></tr></thead><tbody>';
+    rows.forEach((r,i)=>{
+      html += `<tr><td class="num">${i+1}</td><td>${escapeHtml(r.label)}</td><td>${escapeHtml(r.zone)}</td><td class="num">${fmtDateHuman(r.lastDate)}</td>
+        <td><span class="riesgo-chip" style="background:${RIESGO_COLOR[DATA.riesgos.indexOf(r.riesgo)]}22;color:${RIESGO_COLOR[DATA.riesgos.indexOf(r.riesgo)]}">${r.riesgo}</span></td>
+        <td class="num">${r.lastScore}</td><td class="num">${r.reinc}</td><td class="num">${fmtUSD(r.pend)}</td><td class="num" style="font-weight:700;">${r.score.toFixed(0)}</td></tr>`;
+    });
+    html += '</tbody>';
+    tbl.innerHTML = html;
+  }
+
+  let faltanteLineaTopN = 5;
+  function topFaltantePorLinea(fa, limit){
+    const byKey = {};
+    fa.forEach(r=>{
+      if(DATA.storesActive[r[1]] === false) return; // closed stores don't need intervention
+      const key = r[1]+'|'+r[2];
+      if(!byKey[key]) byKey[key] = { storeIdx:r[1], lineIdx:r[2], n:0, reinc:0, monto:0, last:null };
+      const o = byKey[key];
+      o.n++;
+      if(r[8]<0){ o.monto += -r[8]; o.reinc++; }
+      if(!o.last || r[0]>o.last[0]) o.last = r;
+    });
+    const rows = Object.values(byKey).filter(o=>o.monto>0).map(o=>({
+      store:DATA.stores[o.storeIdx], line:DATA.lines[o.lineIdx], zone:DATA.zones[o.last[3]],
+      monto:o.monto, reinc:o.reinc, n:o.n, lastDate:o.last[0], riesgo:DATA.riesgos[o.last[6]]
+    })).sort((a,b)=> b.monto-a.monto || b.reinc-a.reinc);
+    return (limit && limit!=='all') ? rows.slice(0, limit) : rows;
+  }
+  function renderFaltanteLinea(fa){
+    const rows = topFaltantePorLinea(fa, faltanteLineaTopN);
+    const tbl = document.getElementById('tblFaltanteLinea');
+    if(!rows.length){ tbl.innerHTML = '<tr><td class="card-note" style="padding:10px 0;">Sin faltantes en el rango seleccionado.</td></tr>'; return; }
+    let html = '<thead><tr><th>#</th><th>Tienda</th><th>Línea</th><th>Zona</th><th class="num">Faltante acumulado</th><th class="num">Reincidencias</th><th class="num">Auditorías</th><th>Última auditoría</th><th>Riesgo</th></tr></thead><tbody>';
+    rows.forEach((r,i)=>{
+      html += `<tr><td class="num">${i+1}</td><td>${escapeHtml(r.store)}</td><td>${escapeHtml(r.line)}</td><td>${escapeHtml(r.zone)}</td>
+        <td class="num" style="font-weight:700;">${fmtUSD(r.monto)}</td><td class="num">${r.reinc}</td><td class="num">${r.n}</td>
+        <td class="num">${fmtDateHuman(r.lastDate)}</td>
+        <td><span class="riesgo-chip" style="background:${RIESGO_COLOR[DATA.riesgos.indexOf(r.riesgo)]}22;color:${RIESGO_COLOR[DATA.riesgos.indexOf(r.riesgo)]}">${r.riesgo}</span></td></tr>`;
+    });
+    html += '</tbody>';
+    tbl.innerHTML = html;
+  }
+
+  function renderTiendasCerradas(start, end){
+    const rows = DATA.stores.map((name,i)=>({name, close:DATA.storesCloseDate[i]}))
+      .filter(r=>r.close && r.close>=start && r.close<=end)
+      .sort((a,b)=>a.close<b.close?1:-1);
+    const box = document.getElementById('tiendasCerradasBox');
+    if(!rows.length){ box.innerHTML = '<div class="closed-note">Ninguna tienda se cerró en el período.</div>'; return; }
+    box.innerHTML = `<div class="closed-note"><b class="num">${rows.length}</b> tienda(s) cerrada(s) en el período seleccionado.</div>` +
+      `<div class="closed-inline">${rows.map(r=>`<b>${escapeHtml(r.name)}</b> (${fmtDateHuman(r.close)})`).join(' · ')}</div>`;
+  }
+
+  // ============ month aggregation ============
+  function monthAgg(fa){
+    const m = {};
+    fa.forEach(r=>{
+      const k = monthKey(r[0]);
+      if(!m[k]) m[k] = {key:k, n:0, scoreSum:0, detectado:0};
+      m[k].n++; m[k].scoreSum += r[5];
+      if(r[8]<0) m[k].detectado += -r[8];
+    });
+    return Object.values(m).sort((a,b)=>a.key<b.key?-1:1);
+  }
+
+  function renderMensualKpis(fa){
+    const agg = monthAgg(fa);
+    const el = document.getElementById('mensualKpis');
+    if(!agg.length){ el.innerHTML = '<div class="card-note">Sin auditorías en el rango seleccionado.</div>'; return; }
+    const best = agg.reduce((a,b)=>b.n>a.n?b:a);
+    const worst = agg.reduce((a,b)=>b.n<a.n?b:a);
+    const avg = agg.reduce((s,a)=>s+a.n,0)/agg.length;
+    const cards = [
+      { label:'Meses en el período', value:agg.length, sub:fa.length+' auditorías totales', stripe:'var(--accent)' },
+      { label:'Promedio mensual', value:avg.toFixed(1), sub:'auditorías / mes', stripe:'var(--accent)' },
+      { label:'Mejor mes', value:monthLabel(best.key), sub:best.n+' auditorías', stripe:'var(--good)' },
+      { label:'Mes más bajo', value:monthLabel(worst.key), sub:worst.n+' auditorías', stripe:worst.n<avg*0.6?'var(--warning)':'var(--good)' },
+    ];
+    el.innerHTML = cards.map(c=>`
+      <div class="kpi" style="--stripe:${c.stripe}"><div class="kpi-label">${c.label}</div><div class="kpi-value num" style="font-size:19px;">${c.value}</div><div class="kpi-sub">${c.sub}</div></div>`).join('');
+  }
+
+  const TREND_H_WIDE = 280;  // altura única para TODO gráfico de tendencia (mensual + interanual), ancho completo
+  function renderMontoTrend(fa){
+    const agg = monthAgg(fa);
+    const pts = agg.map(a=>({label:monthLabel(a.key), value:a.detectado}));
+    const avg = pts.length ? pts.reduce((s,p)=>s+p.value,0)/pts.length : 0;
+    const peakIdx = pts.length ? pts.reduce((bi,p,i)=>p.value>pts[bi].value?i:bi, 0) : -1;
+    vBarChart(document.getElementById('chartMonto'), pts, {H:TREND_H_WIDE, axisFmt:v=>(v/1000).toFixed(0)+'K',
+      refLine:avg, colorFor:(p,i)=> i===peakIdx ? 'var(--critical)' : 'var(--seq-400)',
+      tooltipFmt:p=>`<b>${p.label}</b><br>Faltante detectado: <b>${fmtUSD(p.value)}</b><br>Promedio del período: ${fmtUSD(avg)}`});
+    const peak = peakIdx>=0 ? pts[peakIdx] : null;
+    document.getElementById('chartMontoLegend').innerHTML = peak
+      ? `<span>Pico: <b>${peak.label}</b> · ${fmtUSD(peak.value)}</span><span>Promedio del período: <b>${fmtUSD(avg)}</b></span>`
+      : '';
+  }
+  // area/line chart sharing the exact grid+axis grammar of vBarChart, so a
+  // line-type trend and a bar-type trend sitting next to each other read as
+  // one consistent chart system rather than two different styles.
+  function lineAreaChart(box, points, opts){
+    opts = opts || {};
+    const W=opts.W||640,H=opts.H||170,PL=opts.PL||44,PR=opts.PR||14,PT=18,PB=28;
+    const iw=W-PL-PR, ih=H-PT-PB;
+    if(!points.length){ box.innerHTML = '<div class="card-note">Sin datos en el rango seleccionado.</div>'; return; }
+    const mx = opts.maxV!=null?opts.maxV:Math.max(...points.map(p=>p.value),1);
+    const x = i => PL+(iw*i/Math.max(points.length-1,1));
+    const y = v => PT+ih-(ih*v/mx);
+    let grid=''; const steps=opts.gridSteps||4;
+    for(let s=0;s<=steps;s++){ const g=mx*s/steps; grid+=`<line class="grid-line" x1="${PL}" x2="${W-PR}" y1="${y(g)}" y2="${y(g)}" />`; grid+=`<text class="axis-lbl" x="0" y="${y(g)+3}">${opts.axisFmt?opts.axisFmt(g):Math.round(g)}</text>`; }
+    const linePts = points.map((p,i)=>`${x(i)},${y(p.value)}`).join(' ');
+    const areaPts = `${x(0)},${y(0)} `+linePts+` ${x(points.length-1)},${y(0)}`;
+    let xLbls=''; const everyN = points.length>16?2:1;
+    points.forEach((p,i)=>{ if(i%everyN===0 || i===points.length-1) xLbls += `<text class="axis-lbl" x="${x(i)}" y="${H-4}" text-anchor="middle">${p.label}</text>`; });
+    const dots = points.map((p,i)=>`<circle class="dot" data-i="${i}" cx="${x(i)}" cy="${y(p.value)}" r="3" fill="var(--accent)" stroke="var(--surface)" stroke-width="1.5" />`).join('');
+    const last = points[points.length-1];
+    const svg = `<svg class="chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">${grid}
+      <polygon points="${areaPts}" fill="var(--accent)" opacity="0.10" />
+      <polyline points="${linePts}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" />
+      ${dots}
+      <circle cx="${x(points.length-1)}" cy="${y(last.value)}" r="4" fill="var(--accent)" stroke="var(--surface)" stroke-width="2" />
+      ${xLbls}</svg>`;
+    box.innerHTML = svg;
+    attachHover(box, points, opts.tooltipFmt, '.dot');
+  }
+
+  function renderCountTrend(fa){
+    const agg = monthAgg(fa);
+    const pts = agg.map(a=>({label:monthLabel(a.key), value:a.n}));
+    const total = pts.reduce((s,p)=>s+p.value,0);
+    const avg = pts.length ? total/pts.length : 0;
+    const last = pts.length ? pts[pts.length-1] : null;
+
+    document.getElementById('chartCountStats').innerHTML = `
+      <div class="trend-stat"><div class="trend-stat-value num">${total.toLocaleString('en-US')}</div><div class="trend-stat-label">Total del período</div></div>
+      <div class="trend-stat"><div class="trend-stat-value num">${avg.toFixed(1)}</div><div class="trend-stat-label">Promedio mensual</div></div>
+      <div class="trend-stat"><div class="trend-stat-value num" style="color:${last && last.value<avg*0.7 ? 'var(--ink-warning)':'var(--ink)'}">${last?last.value:'—'}</div><div class="trend-stat-label">${last?last.label:''} · último mes</div></div>
+    `;
+    lineAreaChart(document.getElementById('chartCount'), pts, {H:TREND_H_WIDE,
+      tooltipFmt:p=>`<b>${p.label}</b><br>${p.value} auditorías`});
+    document.getElementById('chartCountLegend').innerHTML =
+      pts.map(p=>`<span>${p.label}: <b>${p.value}</b></span>`).join('');
+  }
+
+  // average number of days between consecutive audits at the same store
+  function avgAuditCycle(fa){
+    const byStore = {};
+    fa.forEach(r=>{ (byStore[r[1]] = byStore[r[1]]||[]).push(r[0]); });
+    const diffs = [];
+    Object.values(byStore).forEach(dates=>{
+      dates.sort();
+      for(let i=1;i<dates.length;i++) diffs.push(dayDiff(dates[i-1], dates[i]));
+    });
+    return diffs.length ? diffs.reduce((s,v)=>s+v,0)/diffs.length : null;
+  }
+
+  // ============ month menu ============
+  function renderMonthMenu(fa){
+    const agg = monthAgg(fa).slice().sort((a,b)=>b.key<a.key?-1:1); // desc
+    const listEl = document.getElementById('monthList');
+    if(!agg.length){ listEl.innerHTML='<div class="card-note" style="padding:14px;">Sin auditorías en el rango.</div>'; document.getElementById('monthDetail').innerHTML=''; return; }
+    if(!selectedMonth || !agg.find(a=>a.key===selectedMonth)) selectedMonth = agg[0].key;
+    listEl.innerHTML = agg.map(a=>`
+      <div class="month-item ${a.key===selectedMonth?'active':''}" data-month="${a.key}">
+        <span>${monthLabel(a.key)}</span><span class="count-badge">${a.n}</span>
+      </div>`).join('');
+    listEl.querySelectorAll('.month-item').forEach(el=>{
+      el.addEventListener('click', ()=>{ selectedMonth = el.dataset.month; renderMonthMenu(fa); });
+    });
+    renderMonthDetail(fa, selectedMonth);
+  }
+  function renderMonthDetail(fa, key){
+    const rows = fa.filter(r=>monthKey(r[0])===key).slice().sort((a,b)=>a[8]-b[8]);
+    const el = document.getElementById('monthDetail');
+    let html = `<div class="month-detail-hd">${monthLabel(key)} — ${rows.length} auditorías</div>`;
+    html += `<table class="dtable"><thead><tr><th>Tienda</th><th>Auditor</th><th>Línea</th><th>Riesgo</th><th class="num">Score</th><th class="num">A cobrar (costo)</th><th>Estado cobro</th></tr></thead><tbody>`;
+    rows.forEach(r=>{
+      const riesgo = DATA.riesgos[r[6]];
+      html += `<tr><td>${escapeHtml(DATA.stores[r[1]])}</td><td>${escapeHtml(DATA.auditors[r[4]])}</td><td>${escapeHtml(DATA.lines[r[2]])}</td>
+        <td><span class="riesgo-chip" style="background:${RIESGO_COLOR[r[6]]}22;color:${RIESGO_COLOR[r[6]]}">${riesgo}</span></td>
+        <td class="num">${r[5]}</td><td class="num">${fmtUSD(r[8])}</td><td>${escapeHtml(DATA.estados[r[10]])}</td></tr>`;
+    });
+    html += `</tbody></table>`;
+    el.innerHTML = html;
+  }
+
+  // ============ YoY (always full history) ============
+  function renderYoY(){
+    const byYM = {};
+    DATA.audits.forEach(r=>{
+      const y = +r[0].slice(0,4), mo = +r[0].slice(5,7);
+      const k = y+'-'+mo;
+      if(!byYM[k]) byYM[k] = {n:0, monto:0};
+      byYM[k].n++;
+      if(r[8]<0) byYM[k].monto += r[8]; // solo faltante — el sobrante no debe bajar el monto reportado
+    });
+    const years = [...new Set(DATA.audits.map(r=>+r[0].slice(0,4)))].sort();
+    const useYears = years.slice(-3);
+    const cats = MES_ABR.map(m=>m[0].toUpperCase()+m.slice(1));
+    const seriesMonto = useYears.map((y,i)=>({ name:String(y), color:YEAR_COLORS[i%3],
+      values: Array.from({length:12},(_,mIdx)=>{ const e = byYM[y+'-'+(mIdx+1)]; return e ? Math.abs(e.monto) : null; }) }));
+    const seriesCount = useYears.map((y,i)=>({ name:String(y), color:YEAR_COLORS[i%3],
+      values: Array.from({length:12},(_,mIdx)=>{ const e = byYM[y+'-'+(mIdx+1)]; return e ? e.n : 0; }) }));
+    multiLineChart(document.getElementById('chartYoyMonto'), seriesMonto, cats, {H:TREND_H_WIDE, axisFmt:v=>(v/1000).toFixed(0)+'K',
+      tooltipFmt:(s,cat,v)=>`<b>${s.name} · ${cat}</b><br>Faltante detectado: <b>${v!=null?fmtUSD(v):'—'}</b>`});
+    groupedBarChart(document.getElementById('chartYoyCount'), seriesCount, cats, {H:TREND_H_WIDE,
+      tooltipFmt:(s,cat,v)=>`<b>${s.name} · ${cat}</b><br>Auditorías: <b>${v}</b>`});
+    document.getElementById('yoyLegendMonto').innerHTML = seriesMonto.map(s=>`<span><i class="line" style="background:${s.color}"></i>${s.name}</span>`).join('');
+    document.getElementById('yoyLegendCount').innerHTML = seriesCount.map(s=>`<span><i style="background:${s.color}"></i>${s.name}</span>`).join('');
+
+    const cardsEl = document.getElementById('yoyCards');
+    if(useYears.length<2){ cardsEl.innerHTML = '<div class="card-note">Se necesita al menos 2 años de historial para comparar.</div>'; return; }
+    const yA = useYears[useYears.length-1], yP = useYears[useYears.length-2];
+    let maxMonthA = 0;
+    Object.keys(byYM).forEach(k=>{ const [y,m]=k.split('-').map(Number); if(y===yA && m>maxMonthA) maxMonthA=m; });
+    let sumA=0,sumP=0,nA=0,nP=0;
+    for(let m=1;m<=maxMonthA;m++){
+      if(byYM[yA+'-'+m]){ sumA += byYM[yA+'-'+m].monto; nA += byYM[yA+'-'+m].n; }
+      if(byYM[yP+'-'+m]){ sumP += byYM[yP+'-'+m].monto; nP += byYM[yP+'-'+m].n; }
+    }
+    const varMonto = sumP!==0 ? (Math.abs(sumA)-Math.abs(sumP))/Math.abs(sumP)*100 : 0;
+    const varN = nP!==0 ? (nA-nP)/nP*100 : 0;
+    const cards = [
+      {label:`Acumulado ene–${MES_ABR[maxMonthA-1]} ${yA}`, value:fmtUSD(sumA), sub:nA+' auditorías', color:'var(--accent)'},
+      {label:`Mismo período ${yP}`, value:fmtUSD(sumP), sub:nP+' auditorías', color:'var(--ink-muted)'},
+      {label:'Variación monto', value:(varMonto>0?'+':'')+varMonto.toFixed(1)+'%', sub:varMonto>0?'empeoró vs. año anterior':'mejoró vs. año anterior', color:varMonto>0?'var(--critical)':'var(--good)'},
+      {label:'Variación n.º auditorías', value:(varN>0?'+':'')+varN.toFixed(1)+'%', sub:varN>0?'más auditorías que el año anterior':'menos auditorías que el año anterior', color:varN>0?'var(--good)':'var(--warning)'},
+    ];
+    cardsEl.innerHTML = cards.map(c=>`
+      <div class="kpi" style="--stripe:${c.color}">
+        <div class="kpi-label">${c.label}</div>
+        <div class="kpi-value num" style="font-size:19px;color:${c.color}">${c.value}</div>
+        <div class="kpi-sub">${c.sub}</div>
+      </div>`).join('');
+  }
+
+  // ============ line / auditor / reincidentes ============
+  function renderLineExposure(fa){
+    const byLine = {};
+    fa.forEach(r=>{ if(r[8]<0){ byLine[r[2]] = (byLine[r[2]]||0) + (-r[8]); } });
+    const rows = Object.entries(byLine).map(([idx,v])=>({label:DATA.lines[idx], value:v}))
+      .sort((a,b)=>b.value-a.value).slice(0,8);
+    hBarChart(document.getElementById('chartLinea'), rows, {fitH:TREND_H_WIDE,
+      colorFor:()=>'var(--seq-400)', valueFmt:fmtUSDk,
+      tooltipFmt:r=>`<b>${r.label}</b><br>${fmtUSD(r.value)} a cobrar (costo)`});
+  }
+  function renderLineaCounts(fa){
+    const byLine = {};
+    fa.forEach(r=>{ byLine[r[2]] = (byLine[r[2]]||0)+1; });
+    const rows = DATA.lines.map((label,i)=>({label, value:byLine[i]||0}))
+      .filter(r=>r.value>0).sort((a,b)=>b.value-a.value);
+    hBarChart(document.getElementById('chartLineaCount'), rows, {fitH:TREND_H_WIDE,
+      colorFor:()=>'var(--accent)', valueFmt:v=>v,
+      tooltipFmt:r=>`<b>${r.label}</b><br>${r.value} auditorías en el período`});
+  }
+  function renderAuditorLoad(fa){
+    const conc = auditorConcentration(fa);
+    // Solo auditores tipo Retail se muestran individualmente — el resto
+    // (Coral, Sin clasificar) se agrupa en una sola barra "Resto" para no
+    // saturar el gráfico con auditores fuera del alcance de este KPI.
+    const retailTipoIdx = DATA.tiposAuditor.indexOf('Retail');
+    const retail = conc.list.filter(x=>DATA.auditorTipoIdx[x.idx]===retailTipoIdx);
+    const resto = conc.list.filter(x=>DATA.auditorTipoIdx[x.idx]!==retailTipoIdx);
+    const restoN = resto.reduce((s,x)=>s+x.n,0);
+    const rows = retail.map(x=>({label:DATA.auditors[x.idx], value:x.n, rest:false}));
+    if(restoN>0) rows.push({label:'Resto ('+resto.length+' auditores)', value:restoN, rest:true});
+    hBarChart(document.getElementById('chartAuditor'), rows, {rowH:22,
+      colorFor:r=>r.rest?'var(--ink-muted)':'var(--accent)', valueFmt:v=>v,
+      tooltipFmt:r=>`<b>${r.label}</b><br>${r.value} auditorías`});
+    document.getElementById('auditorNote').innerHTML = conc.list.length ? `Los 3 auditores con más carga concentran <b class="num" style="color:var(--ink)">${conc.pct.toFixed(0)}%</b> de las auditorías del período (${conc.list.length} auditores activos, todos los tipos). El gráfico muestra solo tipo Retail.` : '';
+  }
+  function renderReincidentes(fa){
+    const byStore = {};
+    fa.forEach(r=>{ if(r[6]>=2){ byStore[r[1]] = (byStore[r[1]]||0)+1; } });
+    const rows = Object.entries(byStore).map(([idx,n])=>({label:DATA.stores[idx], n:+n}))
+      .filter(r=>r.n>=2).sort((a,b)=>b.n-a.n).slice(0,12);
+    const el = document.getElementById('reincidentes');
+    if(!rows.length){ el.innerHTML = '<div class="card-note">Sin tiendas reincidentes en el rango seleccionado.</div>'; return; }
+    el.innerHTML = rows.map(r=>`
+      <div class="alert-row">
+        <div style="display:flex;align-items:center;">
+          <span class="sev-dot" style="background:${r.n>=4?'var(--critical)':'var(--serious)'}"></span>
+          <div><div class="alert-name">${escapeHtml(r.label)}</div><div class="alert-sub">riesgo alto/crítico</div></div>
+        </div>
+        <span class="count-badge">${r.n}×</span>
+      </div>`).join('');
+  }
+
+  // ============ SKU section ============
+  function renderSkuSection(fs){
+    document.getElementById('skuRangeNote').textContent =
+      'Disponible desde '+fmtDateHuman(DATA.skuRange[0])+' hasta '+fmtDateHuman(DATA.skuRange[1])+' ('+DATA.skus.length+' líneas de detalle en total). '+
+      (fs.length ? fs.length+' líneas en el rango seleccionado.' : 'No hay detalle de SKUs en el rango seleccionado — ajusta las fechas para incluir 2026.');
+
+    const FALT_IDX = [0,2]; // FALTANTE, FALTANTE CRUCE
+    const faltTotal = -fs.filter(r=>FALT_IDX.includes(r[1])).reduce((s,r)=>s+r[4],0);
+    const sobrTotal = fs.filter(r=>[1,3].includes(r[1])).reduce((s,r)=>s+r[4],0);
+    const nCadMal = fs.filter(r=>[4,5].includes(r[1])).length;
+    const montoCadMal = fs.filter(r=>[4,5].includes(r[1])).reduce((s,r)=>s+Math.abs(r[4]),0);
+    const skuKpiCards = [
+      { label:'Líneas analizadas', value:fs.length, sub:'del período seleccionado', stripe:'var(--accent)' },
+      { label:'Faltante total (SKU)', value:fmtUSD(faltTotal), sub:'costo', stripe:'var(--critical)' },
+      { label:'Sobrante total (SKU)', value:fmtUSD(sobrTotal), sub:'costo', stripe:'var(--good)' },
+      { label:'Caducados + mal estado', value:nCadMal+' líneas', sub:fmtUSD(montoCadMal)+' en costo', stripe:'var(--warning)' },
+    ];
+    document.getElementById('skuKpis').innerHTML = skuKpiCards.map(c=>`
+      <div class="kpi" style="--stripe:${c.stripe}"><div class="kpi-label">${c.label}</div><div class="kpi-value num" style="font-size:19px;">${c.value}</div><div class="kpi-sub">${c.sub}</div></div>`).join('');
+
+    const faltRows = fs.filter(r=>FALT_IDX.includes(r[1]));
+
+    // top faltante por monto
+    const byDescMonto = {};
+    faltRows.forEach(r=>{ byDescMonto[r[2]] = (byDescMonto[r[2]]||0) + r[4]; });
+    const topMonto = Object.entries(byDescMonto).map(([idx,v])=>({label:DATA.skuDesc[+idx], value:v}))
+      .sort((a,b)=>a.value-b.value).slice(0,15);
+    rankedList(document.getElementById('chartSkuFaltante'), topMonto, {
+      colorFor:()=>'var(--critical)', valueFmt:fmtUSD,
+      tooltipFmt:r=>`<b>${r.label}</b><br>${fmtUSD(r.value)} en faltantes`});
+
+    // top reincidencia (distinct dates per sku)
+    const byDescDates = {};
+    faltRows.forEach(r=>{ if(!byDescDates[r[2]]) byDescDates[r[2]] = {dates:new Set(), monto:0}; byDescDates[r[2]].dates.add(r[0]); byDescDates[r[2]].monto += r[4]; });
+    const topReinc = Object.entries(byDescDates).map(([idx,o])=>({label:DATA.skuDesc[+idx], value:o.dates.size, monto:o.monto}))
+      .filter(r=>r.value>=2).sort((a,b)=>b.value-a.value || a.monto-b.monto).slice(0,15);
+    rankedList(document.getElementById('chartSkuReinc'), topReinc, {
+      colorFor:()=>'var(--serious)', valueFmt:v=>v+'×',
+      tooltipFmt:r=>`<b>${r.label}</b><br>${r.value} auditorías distintas<br>${fmtUSD(r.monto)} acumulado`});
+
+    // caducados / mal estado tables
+    renderSkuTable('tblCaducados','caducadosHead', fs.filter(r=>r[1]===5), 'Caducados');
+    renderSkuTable('tblMalEstado','malEstadoHead', fs.filter(r=>r[1]===4), 'Mal estado');
+
+    // tipo distribution
+    const byTipo = {};
+    fs.forEach(r=>{ if(!byTipo[r[1]]) byTipo[r[1]] = {n:0, costo:0}; byTipo[r[1]].n++; byTipo[r[1]].costo += r[4]; });
+    const tipoRows = DATA.tipos.map((label,i)=>({label, value:byTipo[i]?byTipo[i].n:0, costo:byTipo[i]?byTipo[i].costo:0}))
+      .filter(r=>r.value>0).sort((a,b)=>b.value-a.value);
+    hBarChart(document.getElementById('chartSkuTipo'), tipoRows, {
+      colorFor:r=> r.label.includes('FALTANTE') ? 'var(--critical)' : r.label.includes('SOBRANTE') ? 'var(--good)' : 'var(--warning)',
+      valueFmt:v=>v,
+      tooltipFmt:r=>`<b>${r.label}</b><br>${r.value} líneas<br>${fmtUSD(r.costo)} costo neto`});
+  }
+  function renderSkuTable(tableId, headId, rows, label){
+    const total = rows.reduce((s,r)=>s+Math.abs(r[4]),0);
+    document.getElementById(headId).textContent = rows.length+' líneas · '+fmtUSD(total)+' en costo';
+    const byDesc = {};
+    rows.forEach(r=>{ if(!byDesc[r[2]]) byDesc[r[2]] = {monto:0, n:0}; byDesc[r[2]].monto += Math.abs(r[4]); byDesc[r[2]].n++; });
+    const top = Object.entries(byDesc).map(([idx,o])=>({label:DATA.skuDesc[+idx], monto:o.monto, n:o.n}))
+      .sort((a,b)=>b.monto-a.monto).slice(0,10);
+    const tbl = document.getElementById(tableId);
+    if(!top.length){ tbl.innerHTML = '<tr><td class="card-note" style="padding:10px 0;">Sin registros de '+label.toLowerCase()+' en el rango seleccionado.</td></tr>'; return; }
+    let html = '<thead><tr><th>SKU — Descripción</th><th class="num">Casos</th><th class="num">Monto (costo)</th></tr></thead><tbody>';
+    top.forEach(r=>{ html += `<tr><td>${escapeHtml(r.label)}</td><td class="num">${r.n}</td><td class="num">${fmtUSD(r.monto)}</td></tr>`; });
+    html += '</tbody>';
+    tbl.innerHTML = html;
+  }
+
+  // ============ historial de tienda (respeta el filtro de fecha superior) ============
+  function buildLineaTiendaMap(fa){
+    const map = {};
+    fa.forEach(r=>{ if(!map[r[2]]) map[r[2]] = new Set(); map[r[2]].add(r[1]); });
+    return map;
+  }
+  let tiendaLineaMap = {};
+
+  function populateLineaSelect(){
+    const selLinea = document.getElementById('selLinea');
+    const prevVal = selLinea.value;
+    const linesWithStores = DATA.lines.map((l,i)=>i).filter(i=>tiendaLineaMap[i] && tiendaLineaMap[i].size);
+    if(!linesWithStores.length){ selLinea.innerHTML = ''; return false; }
+    selLinea.innerHTML = linesWithStores.map(i=>`<option value="${i}">${escapeHtml(DATA.lines[i])}</option>`).join('');
+    if(linesWithStores.map(String).includes(prevVal)) selLinea.value = prevVal;
+    return true;
+  }
+
+  function populateTiendaSelect(){
+    const li = +document.getElementById('selLinea').value;
+    const storeIdxs = [...(tiendaLineaMap[li]||[])].sort((a,b)=>DATA.stores[a].localeCompare(DATA.stores[b]));
+    const selTienda = document.getElementById('selTienda');
+    const prevVal = selTienda.value;
+    selTienda.innerHTML = storeIdxs.map(i=>`<option value="${i}">${escapeHtml(DATA.stores[i])}${DATA.storesActive[i]?'':' (cerrada)'}</option>`).join('');
+    if(storeIdxs.map(String).includes(prevVal)) selTienda.value = prevVal;
+  }
+
+  function renderTiendaProfile(fa){
+    const si = +document.getElementById('selTienda').value;
+    if(Number.isNaN(si)){
+      document.getElementById('tiendaStatus').innerHTML = '';
+      document.getElementById('tiendaKpis').innerHTML = '<div class="card-note">Sin auditorías en el período seleccionado.</div>';
+      document.getElementById('chartTiendaHist').innerHTML=''; document.getElementById('tiendaComposicion').innerHTML=''; document.getElementById('tblTiendaHist').innerHTML='';
+      return;
+    }
+    const rows = fa.filter(r=>r[1]===si).slice().sort((a,b)=>a[0]<b[0]?-1:1);
+    const active = DATA.storesActive[si];
+    const closeDate = DATA.storesCloseDate[si];
+    document.getElementById('tiendaStatus').innerHTML =
+      `<span class="status-badge ${active?'activa':'cerrada'}">${active?'Activa':'Cerrada'+(closeDate?' · '+fmtDateHuman(closeDate):'')}</span>`;
+
+    if(!rows.length){ document.getElementById('tiendaKpis').innerHTML = '<div class="card-note">Sin auditorías en el período seleccionado.</div>'; document.getElementById('chartTiendaHist').innerHTML=''; document.getElementById('tiendaComposicion').innerHTML=''; document.getElementById('tblTiendaHist').innerHTML=''; return; }
+
+    const detectadoRows = rows.filter(r=>r[8]<0);
+    const detectado = -detectadoRows.reduce((s,r)=>s+r[8],0);
+    const cobrarNeto = rows.reduce((s,r)=>s+r[8],0);
+    const cobrado = rows.reduce((s,r)=>s+r[9],0);
+    const last = rows[rows.length-1];
+    const reinc = rows.filter(r=>r[6]>=2).length;
+    let cycleTxt = 'N/D (1 sola auditoría)';
+    if(rows.length>=2){
+      const diffs=[]; for(let i=1;i<rows.length;i++) diffs.push(dayDiff(rows[i-1][0], rows[i][0]));
+      cycleTxt = (diffs.reduce((s,v)=>s+v,0)/diffs.length/30.44).toFixed(1)+' meses';
+    }
+    const kCards = [
+      { label:'Auditorías en el período', value:rows.length, sub:fmtDateHuman(rows[0][0])+' — '+fmtDateHuman(last[0]), stripe:'var(--accent)' },
+      { label:'Ciclo promedio entre auditorías', value:cycleTxt, sub:'según el período seleccionado', stripe:'var(--accent)' },
+      { label:'Score última auditoría', value:last[5], sub:'riesgo: '+DATA.riesgos[last[6]], stripe: last[6]>=2?'var(--serious)':'var(--good)' },
+      { label:'Faltante detectado', value:fmtUSD(detectado), sub:detectadoRows.length+' auditorías con faltante', stripe:'var(--critical)' },
+      { label:'Reincidencia alto/crítico', value:reinc+' veces', sub:'de '+rows.length+' auditorías', stripe: reinc>=2?'var(--critical)':'var(--good)' },
+      { label:'% recuperado', value: cobrarNeto!==0 ? (cobrado/Math.abs(cobrarNeto)*100).toFixed(1)+'%' : '—', sub:fmtUSD(cobrado)+' cobrados', stripe:'var(--accent)' },
+    ];
+    document.getElementById('tiendaKpis').innerHTML = kCards.map(c=>`
+      <div class="kpi" style="--stripe:${c.stripe}"><div class="kpi-label">${c.label}</div><div class="kpi-value num" style="font-size:18px;">${c.value}</div><div class="kpi-sub">${c.sub}</div></div>`).join('');
+
+    const pts = rows.map(r=>({label:r[0].slice(2), value: r[8]<0?-r[8]:0, score:r[5], riesgo:DATA.riesgos[r[6]], date:r[0]}));
+    vBarChart(document.getElementById('chartTiendaHist'), pts, {color:'var(--critical)', axisFmt:v=>fmtUSDk(v),
+      tooltipFmt:p=>`<b>${fmtDateHuman(p.date)}</b><br>Faltante: <b>${fmtUSD(p.value)}</b><br>Score: ${p.score} (${p.riesgo})`});
+
+    const comp = [
+      {label:'Faltantes', value:Math.abs(rows.reduce((s,r)=>s+Math.min(r[15],0),0)), color:'var(--critical)'},
+      {label:'Sobrantes', value:Math.max(rows.reduce((s,r)=>s+r[16],0),0), color:'var(--good)'},
+      {label:'Mal estado y caducados', value:Math.abs(rows.reduce((s,r)=>s+Math.min(r[12],0),0)), color:'var(--warning)'},
+      {label:'Defectos de fábrica', value:Math.abs(rows.reduce((s,r)=>s+Math.min(r[17],0),0)), color:'var(--accent)'},
+    ].filter(c=>c.value>0);
+    rankedList(document.getElementById('tiendaComposicion'), comp, {colorFor:c=>c.color, valueFmt:fmtUSD,
+      tooltipFmt:c=>`<b>${c.label}</b><br>${fmtUSD(c.value)} (PVP)`});
+
+    let html = '<thead><tr><th>Fecha</th><th>Auditor</th><th class="num">Inventario</th><th class="num">A cobrar (costo)</th><th class="num">Score</th><th>Riesgo</th><th>Estado cobro</th></tr></thead><tbody>';
+    rows.slice().reverse().forEach(r=>{
+      html += `<tr><td>${fmtDateHuman(r[0])}</td><td>${escapeHtml(DATA.auditors[r[4]])}</td><td class="num">${fmtUSD(r[7])}</td>
+        <td class="num">${fmtUSD(r[8])}</td><td class="num">${r[5]}</td>
+        <td><span class="riesgo-chip" style="background:${RIESGO_COLOR[r[6]]}22;color:${RIESGO_COLOR[r[6]]}">${DATA.riesgos[r[6]]}</span></td>
+        <td>${escapeHtml(DATA.estados[r[10]])}</td></tr>`;
+    });
+    html += '</tbody>';
+    document.getElementById('tblTiendaHist').innerHTML = html;
+  }
+
+  function renderTiendaRiesgoLateral(fa){
+    const rows = topPrioridad(fa, 8);
+    const el = document.getElementById('tiendaRiesgoLateral');
+    if(!rows.length){ el.innerHTML = '<div class="card-note">Sin datos en el período.</div>'; return; }
+    el.innerHTML = rows.map((r,i)=>`
+      <button type="button" class="risk-pick-row" data-store="${escapeHtml(r.label)}">
+        <div>
+          <div class="risk-pick-name">${i+1}. ${escapeHtml(r.label)}</div>
+          <div class="risk-pick-sub">${r.riesgo} · score ${r.lastScore} · ${r.reinc}× reincid.</div>
+        </div>
+      </button>`).join('');
+    el.querySelectorAll('.risk-pick-row').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const name = btn.dataset.store;
+        const si = DATA.stores.indexOf(name);
+        if(si<0) return;
+        for(const li of Object.keys(tiendaLineaMap)){
+          if(tiendaLineaMap[li].has(si)){ document.getElementById('selLinea').value = li; break; }
+        }
+        populateTiendaSelect();
+        document.getElementById('selTienda').value = si;
+        renderTiendaProfile(lastFilteredAudits);
+      });
+    });
+  }
+
+  let lastFilteredAudits = [];
+  function renderTiendaHistorial(fa){
+    lastFilteredAudits = fa;
+    tiendaLineaMap = buildLineaTiendaMap(fa);
+    const hasLineas = populateLineaSelect();
+    if(hasLineas){ populateTiendaSelect(); }
+    else { document.getElementById('selTienda').innerHTML = ''; }
+    renderTiendaProfile(fa);
+    renderTiendaRiesgoLateral(fa);
+  }
+
+  document.getElementById('selLinea').addEventListener('change', ()=>{ populateTiendaSelect(); renderTiendaProfile(lastFilteredAudits); });
+  document.getElementById('selTienda').addEventListener('change', ()=>{ renderTiendaProfile(lastFilteredAudits); });
+
+  // ============ KPI Auditores — verificación para pago (controles propios, independientes del filtro superior) ============
+  // n.º de meses cubiertos por [start,end], inclusive — para escalar la meta
+  // mensual al período elegido (si no, comparar 171 auditorías contra una
+  // meta de "12" en un rango de 2 años da un % sin sentido).
+  function monthsSpan(start, end){
+    const [sy,sm] = start.split('-').map(Number);
+    const [ey,em] = end.split('-').map(Number);
+    return Math.max((ey-sy)*12 + (em-sm) + 1, 1);
+  }
+
+  function populateKpiAuditorSelect(){
+    const tipoIdx = +document.getElementById('kpiAudTipo').value;
+    const sel = document.getElementById('kpiAudSel');
+    const prevVal = sel.value;
+    const idxs = DATA.auditors.map((a,i)=>i).filter(i=>DATA.auditorTipoIdx[i]===tipoIdx)
+      .sort((a,b)=>DATA.auditors[a].localeCompare(DATA.auditors[b]));
+    const tipoName = DATA.tiposAuditor[tipoIdx];
+    sel.innerHTML = `<option value="todos">Todos (${escapeHtml(tipoName)})</option>` +
+      idxs.map(i=>`<option value="${i}">${escapeHtml(DATA.auditors[i])}</option>`).join('');
+    if(prevVal==='todos' || idxs.map(String).includes(prevVal)) sel.value = prevVal;
+  }
+
+  function renderKpiAuditorGrupo(tipoIdx, start, end, meta){
+    const nMeses = monthsSpan(start, end);
+    const metaEfectiva = meta * nMeses;
+    const idxs = DATA.auditors.map((a,i)=>i).filter(i=>DATA.auditorTipoIdx[i]===tipoIdx);
+    const rowsByAud = idxs.map(ai=>{
+      const rows = DATA.audits.filter(r=>r[4]===ai && r[0]>=start && r[0]<=end);
+      const n = rows.length;
+      const nStores = new Set(rows.map(r=>r[1])).size;
+      const scoreAvg = n ? rows.reduce((s,r)=>s+r[5],0)/n : 0;
+      const pct = n/metaEfectiva*100;
+      return { ai, label:DATA.auditors[ai], n, nStores, scoreAvg, pct };
+    }).sort((a,b)=>b.n-a.n);
+
+    const totalN = rowsByAud.reduce((s,r)=>s+r.n,0);
+    const avgPct = rowsByAud.length ? rowsByAud.reduce((s,r)=>s+r.pct,0)/rowsByAud.length : 0;
+    const nEnMeta = rowsByAud.filter(r=>r.pct>=90).length;
+    const nBajo = rowsByAud.filter(r=>r.pct<50).length;
+    const avgColor = avgPct>=90?'var(--good)':avgPct<50?'var(--critical)':'var(--warning)';
+
+    const cards = [
+      { label:'Auditores del tipo', value:rowsByAud.length, sub:DATA.tiposAuditor[tipoIdx], stripe:'var(--accent)' },
+      { label:'Auditorías totales', value:totalN, sub:nMeses+' mes(es) · meta efectiva '+metaEfectiva+' c/u', stripe:'var(--accent)' },
+      { label:'Cumplimiento promedio', value:avgPct.toFixed(0)+'%', sub:nEnMeta+' en meta (≥90%) · '+nBajo+' bajo cumplimiento (<50%)', stripe:avgColor },
+    ];
+    document.getElementById('kpiAudGrupoSummary').innerHTML = cards.map(c=>`
+      <div class="kpi" style="--stripe:${c.stripe}"><div class="kpi-label">${c.label}</div><div class="kpi-value num" style="font-size:19px;">${c.value}</div><div class="kpi-sub">${c.sub}</div></div>`).join('');
+
+    const tbl = document.getElementById('kpiAudGrupoTable');
+    if(!rowsByAud.length){ tbl.innerHTML = '<tr><td class="card-note" style="padding:10px 0;">Sin auditores de este tipo.</td></tr>'; return; }
+    let html = '<thead><tr><th>Auditor</th><th class="num">Auditorías</th><th class="num">% Cumplimiento</th><th class="num">Tiendas distintas</th><th class="num">Score prom.</th></tr></thead><tbody>';
+    rowsByAud.forEach(r=>{
+      const color = r.pct>=90?'var(--good)':r.pct<50?'var(--critical)':'var(--warning)';
+      html += `<tr><td>${escapeHtml(r.label)}</td><td class="num">${r.n}</td><td class="num" style="color:${color};font-weight:700;">${r.pct.toFixed(0)}%</td><td class="num">${r.nStores}</td><td class="num">${r.n?r.scoreAvg.toFixed(1):'—'}</td></tr>`;
+    });
+    html += '</tbody>';
+    tbl.innerHTML = html;
+  }
+
+  function renderKpiAuditor(){
+    const selVal = document.getElementById('kpiAudSel').value;
+    const start = document.getElementById('kpiAudStart').value;
+    const end = document.getElementById('kpiAudEnd').value;
+    const meta = Math.max(1, +document.getElementById('kpiAudMeta').value || 12);
+    const tipoIdx = +document.getElementById('kpiAudTipo').value;
+
+    if(selVal === 'todos'){
+      document.getElementById('kpiAudIndividual').style.display = 'none';
+      document.getElementById('kpiAudGrupo').style.display = '';
+      renderKpiAuditorGrupo(tipoIdx, start, end, meta);
+      return;
+    }
+    document.getElementById('kpiAudIndividual').style.display = '';
+    document.getElementById('kpiAudGrupo').style.display = 'none';
+
+    const ai = +selVal;
+    const rows = DATA.audits.filter(r=> r[4]===ai && r[0]>=start && r[0]<=end).slice().sort((a,b)=>a[0]<b[0]?-1:1);
+
+    const nMeses = monthsSpan(start, end);
+    const metaEfectiva = meta * nMeses;
+    const n = rows.length;
+    const nStores = new Set(rows.map(r=>r[1])).size;
+    const scoreAvg = n ? rows.reduce((s,r)=>s+r[5],0)/n : 0;
+    const aCobrar = rows.reduce((s,r)=>s+r[8],0);
+    const pct = n/metaEfectiva*100;
+    const estado = pct>=90 ? 'en meta' : pct<50 ? 'bajo cumplimiento' : 'cerca de meta';
+    const estadoColor = pct>=90 ? 'var(--ink-good)' : pct<50 ? 'var(--ink-critical)' : 'var(--ink-warning)';
+
+    const cards = [
+      { label:'Auditorías realizadas', value:n, sub:nMeses+' mes(es) · meta efectiva: '+metaEfectiva, stripe:'var(--border)' },
+      { label:'% Cumplimiento', value:pct.toFixed(0)+'%', sub:estado, stripe:estadoColor, tone:estadoColor },
+      { label:'Tiendas distintas visitadas', value:nStores, sub:n?'promedio '+(n/Math.max(nStores,1)).toFixed(1)+' aud./tienda':'—', stripe:'var(--border)' },
+      { label:'Score de riesgo promedio', value:n?scoreAvg.toFixed(1):'—', sub:'sobre 100', stripe:'var(--border)' },
+      { label:'Monto a cobrar generado', value:fmtUSD(aCobrar), sub:'costo, en el período', stripe:'var(--border)' },
+    ];
+    document.getElementById('kpiAudSummary').innerHTML = cards.map(c=>`
+      <div class="kpi" style="--stripe:${c.stripe}">
+        <div class="kpi-label">${c.label}</div>
+        <div class="kpi-value num" style="--tone:${c.tone||'var(--ink)'}">${c.value}</div>
+        <div class="kpi-sub">${c.sub}</div>
+      </div>`).join('');
+
+    const tbl = document.getElementById('kpiAudTable');
+    if(!rows.length){ tbl.innerHTML = '<tr><td class="card-note" style="padding:10px 0;">Sin auditorías de este auditor en el período seleccionado.</td></tr>'; return; }
+    let html = '<thead><tr><th>Fecha</th><th>Tienda</th><th>Línea</th><th>Zona</th><th>Riesgo</th><th class="num">Score</th><th class="num">A cobrar (costo)</th><th>Estado proceso</th></tr></thead><tbody>';
+    rows.forEach(r=>{
+      html += `<tr><td>${fmtDateHuman(r[0])}</td><td>${escapeHtml(DATA.stores[r[1]])}</td><td>${escapeHtml(DATA.lines[r[2]])}</td><td>${escapeHtml(DATA.zones[r[3]])}</td>
+        <td><span class="riesgo-chip" style="background:${RIESGO_COLOR[r[6]]}22;color:${RIESGO_COLOR[r[6]]}">${DATA.riesgos[r[6]]}</span></td>
+        <td class="num">${r[5]}</td><td class="num">${fmtUSD(r[8])}</td><td>${escapeHtml(DATA.funnelStages[r[14]])}</td></tr>`;
+    });
+    html += '</tbody>';
+    tbl.innerHTML = html;
+  }
+
+  function initKpiAuditores(){
+    const tipoSel = document.getElementById('kpiAudTipo');
+    tipoSel.innerHTML = DATA.tiposAuditor.map((t,i)=>`<option value="${i}">${escapeHtml(t)}</option>`).join('');
+    populateKpiAuditorSelect();
+    const [ay,am] = DATA.asOf.split('-');
+    const startEl = document.getElementById('kpiAudStart'), endEl = document.getElementById('kpiAudEnd');
+    startEl.min = MIN_DATE; startEl.max = MAX_DATE; startEl.value = ay+'-'+am+'-01';
+    endEl.min = MIN_DATE; endEl.max = MAX_DATE; endEl.value = DATA.asOf;
+    tipoSel.addEventListener('change', ()=>{ populateKpiAuditorSelect(); renderKpiAuditor(); });
+    document.getElementById('kpiAudSel').addEventListener('change', renderKpiAuditor);
+    startEl.addEventListener('change', renderKpiAuditor);
+    endEl.addEventListener('change', renderKpiAuditor);
+    document.getElementById('kpiAudMeta').addEventListener('input', renderKpiAuditor);
+    renderKpiAuditor();
+  }
+  initKpiAuditores();
+
+  // ============ Próximas auditorías (siempre "a hoy", independiente del filtro superior) ============
+  function renderPendientesAuditar(){
+    const lastByName = {};
+    DATA.audits.forEach(r=>{
+      const name = DATA.stores[r[1]];
+      if(!lastByName[name] || r[0]>lastByName[name]) lastByName[name] = r[0];
+    });
+    const rows = DATA.activeRoster.map(([name,linea,zona,apertura])=>{
+      const last = lastByName[name] || null;
+      const dias = last ? dayDiff(last, DATA.asOf) : null;
+      return { name, linea, zona, last, dias, apertura };
+    }).sort((a,b)=>{
+      if(a.dias==null && b.dias==null) return a.name.localeCompare(b.name);
+      if(a.dias==null) return -1;
+      if(b.dias==null) return 1;
+      return b.dias-a.dias;
+    });
+
+    const nNunca = rows.filter(r=>r.dias==null).length;
+    const n90 = rows.filter(r=>r.dias!=null && r.dias>90).length + nNunca;
+    const n180 = rows.filter(r=>r.dias!=null && r.dias>180).length + nNunca;
+
+    document.getElementById('pendientesNote').textContent =
+      'Siempre calculado a partir de hoy ('+fmtDateHuman(DATA.asOf)+'), sin depender del filtro de fechas de arriba — es un indicador de planificación, no de análisis histórico. Excluye tiendas cerradas ('+rows.length+' tiendas activas evaluadas, hoja Tiendas).';
+
+    const cards = [
+      { label:'Nunca auditadas', value:nNunca, sub:'de '+rows.length+' tiendas activas', stripe: nNunca>0?'var(--critical)':'var(--good)' },
+      { label:'Sin auditar en +90 días', value:n90, sub:'incluye nunca auditadas', stripe: n90>0?'var(--warning)':'var(--good)' },
+      { label:'Sin auditar en +180 días', value:n180, sub:'urgencia alta', stripe: n180>0?'var(--critical)':'var(--good)' },
+      { label:'Cobertura ≤90 días (hoy)', value:DATA.coverage.p90+'%', sub:DATA.coverage.n90+' de '+DATA.coverage.nActivas+' tiendas activas', stripe:'var(--accent)' },
+    ];
+    document.getElementById('pendientesKpis').innerHTML = cards.map(c=>`
+      <div class="kpi" style="--stripe:${c.stripe}"><div class="kpi-label">${c.label}</div><div class="kpi-value num" style="font-size:19px;">${c.value}</div><div class="kpi-sub">${c.sub}</div></div>`).join('');
+
+    const tbl = document.getElementById('tblPendientes');
+    let html = '<thead><tr><th>Tienda</th><th>Línea</th><th>Zona</th><th>Última auditoría</th><th class="num">Días sin auditar</th><th>Prioridad</th></tr></thead><tbody>';
+    rows.forEach(r=>{
+      const chip = r.dias==null
+        ? (r.apertura && dayDiff(r.apertura, DATA.asOf)<=60
+            ? {t:'TIENDA NUEVA', c:'var(--accent)'}
+            : {t:'NUNCA AUDITADA', c:'var(--critical)'})
+        : r.dias>180 ? {t:'URGENTE', c:'var(--critical)'}
+        : r.dias>90 ? {t:'ATRASADA', c:'var(--warning)'}
+        : {t:'AL DÍA', c:'var(--good)'};
+      const ultimaCol = r.last ? fmtDateHuman(r.last) : (r.apertura ? 'Abierta '+fmtDateHuman(r.apertura) : '—');
+      html += `<tr><td>${escapeHtml(r.name)}</td><td>${escapeHtml(r.linea)}</td><td>${escapeHtml(r.zona)}</td>
+        <td>${ultimaCol}</td><td class="num">${r.dias!=null?r.dias:'—'}</td>
+        <td><span class="riesgo-chip" style="background:${chip.c}22;color:${chip.c}">${chip.t}</span></td></tr>`;
+    });
+    html += '</tbody>';
+    tbl.innerHTML = html;
+  }
+  renderPendientesAuditar();
+
+  applyFilters();
+})();
+</script>
