@@ -720,8 +720,9 @@
   }
 
   // ============ header/footer meta (dynamic — regenerate to refresh these) ============
+  const nAuditoresRetail = DATA.auditorTipoIdx.filter(i=>DATA.tiposAuditor[i]==='Retail').length;
   document.getElementById('hdrCounts').textContent =
-    DATA.coverage.nActivas+' tiendas activas · '+DATA.auditors.length+' auditores · '+DATA.sociedades.length+' sociedades';
+    DATA.coverage.nActivas+' tiendas activas · '+nAuditoresRetail+' auditores Retail · '+DATA.sociedades.length+' sociedades';
   document.getElementById('hdrAsOf').textContent = 'Corte de datos: '+fmtDateHuman(DATA.asOf);
   document.getElementById('footAsOf').textContent = 'Corte de datos: '+fmtDateHuman(DATA.asOf);
   document.getElementById('footSource').textContent =
