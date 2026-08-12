@@ -107,6 +107,12 @@ estado_idx = {s: i for i, s in enumerate(estados)}
 sociedad_idx = {s: i for i, s in enumerate(sociedades)}
 
 audits = []
+# Montos con 2 decimales, no int redondeado por fila: redondear cada fila a
+# entero antes de sumar 79+ auditorías acumula un desfase de un par de
+# dolares frente a un calculo manual en Excel (visto en vivo: dashboard
+# mostraba $21,114 vs $21,116.19 calculado a mano para faltante 2026 YTD).
+# El redondeo a entero para mostrar ya lo hace fmtUSD() en el HTML, sobre la
+# suma final -- no hace falta perder precision aqui.
 for _, r in reg.iterrows():
     riesgo = r['RIESGO'] if r['RIESGO'] in RIESGO_ORDER else 'MEDIO'
     audits.append([
@@ -117,17 +123,17 @@ for _, r in reg.iterrows():
         auditor_idx[r['AUDITOR']],
         int(round(r['SCORE (0/100)'])),
         RIESGO_ORDER.index(riesgo),
-        int(round(r['TOTAL INVENTARIO COSTO'])),
-        int(round(r['RESULT. A COBRAR COSTO'])),
-        int(round(r['VALOR COBRADO'])),
+        round(float(r['TOTAL INVENTARIO COSTO']), 2),
+        round(float(r['RESULT. A COBRAR COSTO']), 2),
+        round(float(r['VALOR COBRADO']), 2),
         estado_idx[r['ESTADO COBRO']],
         1 if r['Ajuste (Si/No)'] == 'SI' else 0,
-        int(round(r['MAL ESTADO CADUCADOS PVP'])),
+        round(float(r['MAL ESTADO CADUCADOS PVP']), 2),
         sociedad_idx[r['SOCIEDAD']],
         FUNNEL_MAP.get(r['ESTADO REGISTRO'], 2),
-        int(round(r['FALTANTES PVP'])),
-        int(round(r['SOBRANTES PVP'])),
-        int(round(r['DEFECTOS FÁBRICA PVP'])),
+        round(float(r['FALTANTES PVP']), 2),
+        round(float(r['SOBRANTES PVP']), 2),
+        round(float(r['DEFECTOS FÁBRICA PVP']), 2),
     ])
 
 # ---------- Tiendas (coverage snapshot, fixed "as of" metric) ----------
