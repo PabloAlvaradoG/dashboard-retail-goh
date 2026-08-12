@@ -95,6 +95,20 @@
   .ctrl-count{ margin-left:auto; font-size:12px; color:var(--ink-muted); }
   .ctrl-count b{ color:var(--ink); font-family: ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
 
+  .excl-panel{ position:absolute; top:calc(100% + 8px); left:0; z-index:30; background:var(--surface); border:1px solid var(--border); border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,.16); padding:16px; display:flex; flex-direction:column; gap:12px; }
+  .excl-panel-cols{ display:flex; gap:22px; }
+  .excl-col{ width:190px; flex:none; display:flex; flex-direction:column; gap:8px; }
+  .excl-col-wide{ width:260px; }
+  .excl-col-hd{ font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--ink-muted); }
+  .excl-search{ font-size:12px; padding:6px 9px; border-radius:7px; border:1px solid var(--border); background:var(--surface-2); color:var(--ink); }
+  .excl-list{ display:flex; flex-direction:column; gap:1px; max-height:230px; overflow-y:auto; }
+  .excl-item{ display:flex; align-items:center; gap:7px; font-size:12px; color:var(--ink-2); padding:4px 5px; border-radius:6px; cursor:pointer; }
+  .excl-item:hover{ background:var(--surface-2); }
+  .excl-item input{ accent-color:var(--accent); }
+  .excl-clear{ align-self:flex-start; font-size:11px; font-weight:600; color:var(--accent); background:none; border:none; cursor:pointer; padding:0; }
+  .excl-banner{ display:flex; align-items:center; gap:8px; font-size:12px; color:var(--ink-warning); background:var(--warning-wash); border:1px solid var(--border); border-radius:9px; padding:9px 14px; margin:-12px 0 22px; }
+  .excl-banner b{ color:var(--ink-warning); }
+
   .view-toggle{ display:flex; gap:4px; background:var(--surface-2); border:1px solid var(--border); border-radius:10px; padding:4px; width:max-content; margin-bottom:22px; }
   .view-tab{ font-size:12.5px; font-weight:700; padding:7px 16px; border-radius:7px; border:none; background:transparent; color:var(--ink-2); cursor:pointer; }
   .view-tab.active{ background:var(--surface); color:var(--accent); box-shadow:0 1px 3px var(--border); }
@@ -207,6 +221,11 @@
   table.dtable td.num, table.dtable th.num{ font-family: ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; text-align:right; }
   table.dtable tbody tr:nth-child(even) td{ background:var(--surface-2); }
   table.dtable tr:hover td{ background:var(--accent-wash); }
+  table.dtable tr.tr-active td{ background:var(--accent-wash); box-shadow:inset 2px 0 0 var(--accent); }
+  .rlist-row{ cursor:default; }
+  .rlist-row.rlist-clickable{ cursor:pointer; border-radius:6px; }
+  .rlist-row.rlist-clickable:hover{ background:var(--surface-2); }
+  .rlist-row.rlist-active .rlist-label{ color:var(--ink); font-weight:700; }
   .table-scroll{ overflow-x:auto; margin-top:10px; }
   .riesgo-chip{ font-size:11px; font-weight:700; padding:3px 10px; border-radius:100px; text-transform:uppercase; }
 
@@ -256,8 +275,28 @@
     <button class="preset" data-preset="6m">Últimos 6 meses</button>
     <button class="preset" data-preset="ytd">2026 (YTD)</button>
     <button class="preset" data-preset="py">2025 completo</button>
+    <div class="ctrl-sep"></div>
+    <div class="ctrl-group" style="position:relative;">
+      <button class="preset" id="btnExclToggle" type="button">Excluir ▾</button>
+      <div class="excl-panel" id="exclPanel" style="display:none;">
+        <div class="excl-panel-cols">
+          <div class="excl-col">
+            <div class="excl-col-hd">Líneas de negocio</div>
+            <div class="excl-list" id="exclLineasList"></div>
+          </div>
+          <div class="excl-col excl-col-wide">
+            <div class="excl-col-hd">Tiendas</div>
+            <input type="text" class="excl-search" id="exclTiendaSearch" placeholder="Buscar tienda…">
+            <div class="excl-list excl-list-scroll" id="exclTiendasList"></div>
+          </div>
+        </div>
+        <button class="excl-clear" id="exclClearBtn" type="button">Limpiar exclusiones</button>
+      </div>
+    </div>
     <span class="ctrl-count" id="rangeCount"></span>
   </div>
+
+  <div class="excl-banner" id="exclBanner" style="display:none;"></div>
 
   <div class="view-toggle" role="tablist">
     <button class="view-tab active" data-view="directorio" role="tab" aria-selected="true">Resumen Gerencial</button>
@@ -382,10 +421,19 @@
             <div id="tiendaComposicion" style="margin-top:10px;"></div>
           </div>
         </div>
-        <div class="card-hd" style="margin-top:16px;"><h3>Historial en el período</h3></div>
+        <div class="card-hd" style="margin-top:16px;"><h3>Historial en el período</h3><span class="card-note">clic en una fila para ver sus SKUs faltantes</span></div>
         <div class="table-scroll"><table class="dtable" id="tblTiendaHist"></table></div>
+
+        <div class="card-hd" style="margin-top:16px;"><h3>SKUs con mayor faltante</h3><span class="card-note" id="tiendaAuditSkuHead"></span></div>
+        <p class="sec-note" style="margin:-4px 0 4px;">Excluye ítems marcados como cruce (faltante compensado con un sobrante de otro SKU en la misma auditoría) — se muestra solo el faltante real, no cruzado.</p>
+        <div id="tiendaAuditSkuDetail"></div>
       </div>
       <div>
+        <div class="card" style="margin-bottom:16px;">
+          <div class="card-hd"><h3>Líneas por resultado neto</h3></div>
+          <span class="card-note">a cobrar (costo) · clic para filtrar</span>
+          <div id="lineaFaltanteLateral" style="margin-top:10px;"></div>
+        </div>
         <div class="card" style="margin-bottom:16px;">
           <div class="card-hd"><h3>Mayor riesgo</h3></div>
           <span class="card-note">en el período seleccionado · clic para abrir</span>
@@ -788,10 +836,79 @@
   // header: lista de líneas de negocio incluidas en la matriz
   document.getElementById('hdrLines').textContent = 'Líneas incluidas: ' + DATA.lines.join(' · ');
 
+  // ============ excluir líneas / tiendas del análisis ============
+  // Se aplica a fa/fs (y por lo tanto a todo lo que se alimenta de ellos:
+  // KPIs, tendencias, ranking de faltantes, historial de tienda, SKUs...).
+  // Deliberadamente NO afecta Comparativo interanual (usa todo el histórico
+  // por diseño) ni el drill-down de KPI Auditores / Próximas auditorías
+  // (tienen su propio alcance independiente del filtro superior).
+  let excludedLines = new Set();
+  let excludedStores = new Set();
+  const storeToLine = {};
+  DATA.audits.forEach(r=>{ if(!(r[1] in storeToLine)) storeToLine[r[1]] = r[2]; });
+  function storeExcluded(si){ return excludedStores.has(si) || excludedLines.has(storeToLine[si]); }
+
+  function renderExclLineasList(){
+    const el = document.getElementById('exclLineasList');
+    el.innerHTML = DATA.lines.map((l,i)=>`
+      <label class="excl-item"><input type="checkbox" data-line="${i}" ${excludedLines.has(i)?'checked':''}> ${escapeHtml(l)}</label>`).join('');
+    el.querySelectorAll('input').forEach(cb=>{
+      cb.addEventListener('change', ()=>{
+        const li = +cb.dataset.line;
+        if(cb.checked) excludedLines.add(li); else excludedLines.delete(li);
+        renderExclBanner(); applyFilters();
+      });
+    });
+  }
+  function renderExclTiendasList(query){
+    const q = (query||'').trim().toUpperCase();
+    const el = document.getElementById('exclTiendasList');
+    const idxs = DATA.stores.map((s,i)=>i).filter(i=>!q || DATA.stores[i].toUpperCase().includes(q));
+    el.innerHTML = idxs.map(i=>`
+      <label class="excl-item"><input type="checkbox" data-store="${i}" ${excludedStores.has(i)?'checked':''}> ${escapeHtml(DATA.stores[i])}${DATA.storesActive[i]?'':' (cerrada)'}</label>`).join('');
+    el.querySelectorAll('input').forEach(cb=>{
+      cb.addEventListener('change', ()=>{
+        const si = +cb.dataset.store;
+        if(cb.checked) excludedStores.add(si); else excludedStores.delete(si);
+        renderExclBanner(); applyFilters();
+      });
+    });
+  }
+  function renderExclBanner(){
+    const n = excludedLines.size + excludedStores.size;
+    const btn = document.getElementById('btnExclToggle');
+    btn.textContent = n ? `Excluir (${n}) ▾` : 'Excluir ▾';
+    btn.classList.toggle('active', n>0);
+    const banner = document.getElementById('exclBanner');
+    if(!n){ banner.style.display = 'none'; return; }
+    const parts = [];
+    if(excludedLines.size) parts.push((excludedLines.size>1?excludedLines.size+' líneas':'1 línea')+' ('+[...excludedLines].map(i=>DATA.lines[i]).join(', ')+')');
+    if(excludedStores.size) parts.push((excludedStores.size>1?excludedStores.size+' tiendas':'1 tienda')+' ('+[...excludedStores].map(i=>DATA.stores[i]).join(', ')+')');
+    banner.style.display = 'flex';
+    banner.innerHTML = '⚠ Filtro activo — excluidas del análisis: <b>'+parts.join(' · ')+'</b>';
+  }
+  document.getElementById('btnExclToggle').addEventListener('click', (e)=>{
+    e.stopPropagation();
+    const panel = document.getElementById('exclPanel');
+    panel.style.display = panel.style.display==='none' ? 'flex' : 'none';
+  });
+  document.addEventListener('click', (e)=>{
+    const panel = document.getElementById('exclPanel');
+    if(panel.style.display!=='none' && !panel.contains(e.target) && e.target.id!=='btnExclToggle'){ panel.style.display = 'none'; }
+  });
+  document.getElementById('exclTiendaSearch').addEventListener('input', (e)=>renderExclTiendasList(e.target.value));
+  document.getElementById('exclClearBtn').addEventListener('click', ()=>{
+    excludedLines.clear(); excludedStores.clear();
+    renderExclLineasList(); renderExclTiendasList(document.getElementById('exclTiendaSearch').value);
+    renderExclBanner(); applyFilters();
+  });
+  renderExclLineasList();
+  renderExclTiendasList('');
+
   function applyFilters(){
     const start = dateStartEl.value, end = dateEndEl.value;
-    const fa = DATA.audits.filter(r=> r[0]>=start && r[0]<=end);
-    const fs = DATA.skus.filter(r=> r[0]>=start && r[0]<=end);
+    const fa = DATA.audits.filter(r=> r[0]>=start && r[0]<=end && !storeExcluded(r[1]));
+    const fs = DATA.skus.filter(r=> r[0]>=start && r[0]<=end && !storeExcluded(r[3]));
     document.getElementById('rangeCount').innerHTML = '<b class="num">'+fa.length+'</b> auditorías en el rango &nbsp;·&nbsp; '+fmtDateHuman(start)+' — '+fmtDateHuman(end);
     renderKPIs(fa);
     renderMontoTrend(fa);
@@ -1206,14 +1323,20 @@
   }
 
   // ============ SKU section ============
-  function renderSkuSection(fs){
+  // Análisis de SKUs: solo faltante / sobrante / caducados / mal estado.
+  // Excluye cruces (faltante compensado con sobrante de otro SKU — no es
+  // una diferencia real), defecto de fábrica y otros hallazgos.
+  const SKU_TIPOS_INCLUIDOS = [0,1,4,5]; // FALTANTE, SOBRANTE, MAL ESTADO, CADUCADOS
+  const skuTotalIncluido = DATA.skus.filter(r=>SKU_TIPOS_INCLUIDOS.includes(r[1])).length;
+
+  function renderSkuSection(fsAll){
+    const fs = fsAll.filter(r=>SKU_TIPOS_INCLUIDOS.includes(r[1]));
     document.getElementById('skuRangeNote').textContent =
-      'Disponible desde '+fmtDateHuman(DATA.skuRange[0])+' hasta '+fmtDateHuman(DATA.skuRange[1])+' ('+DATA.skus.length+' líneas de detalle en total). '+
+      'Disponible desde '+fmtDateHuman(DATA.skuRange[0])+' hasta '+fmtDateHuman(DATA.skuRange[1])+' ('+skuTotalIncluido+' líneas de detalle en total, excluyendo cruces/defectos/otros). '+
       (fs.length ? fs.length+' líneas en el rango seleccionado.' : 'No hay detalle de SKUs en el rango seleccionado — ajusta las fechas para incluir 2026.');
 
-    const FALT_IDX = [0,2]; // FALTANTE, FALTANTE CRUCE
-    const faltTotal = -fs.filter(r=>FALT_IDX.includes(r[1])).reduce((s,r)=>s+r[4],0);
-    const sobrTotal = fs.filter(r=>[1,3].includes(r[1])).reduce((s,r)=>s+r[4],0);
+    const faltTotal = -fs.filter(r=>r[1]===0).reduce((s,r)=>s+r[4],0);
+    const sobrTotal = fs.filter(r=>r[1]===1).reduce((s,r)=>s+r[4],0);
     const nCadMal = fs.filter(r=>[4,5].includes(r[1])).length;
     const montoCadMal = fs.filter(r=>[4,5].includes(r[1])).reduce((s,r)=>s+Math.abs(r[4]),0);
     const skuKpiCards = [
@@ -1225,7 +1348,7 @@
     document.getElementById('skuKpis').innerHTML = skuKpiCards.map(c=>`
       <div class="kpi" style="--stripe:${c.stripe}"><div class="kpi-label">${c.label}</div><div class="kpi-value num" style="font-size:19px;">${c.value}</div><div class="kpi-sub">${c.sub}</div></div>`).join('');
 
-    const faltRows = fs.filter(r=>FALT_IDX.includes(r[1]));
+    const faltRows = fs.filter(r=>r[1]===0);
 
     // top faltante por monto
     const byDescMonto = {};
@@ -1307,6 +1430,7 @@
       document.getElementById('tiendaStatus').innerHTML = '';
       document.getElementById('tiendaKpis').innerHTML = '<div class="card-note">Sin auditorías en el período seleccionado.</div>';
       document.getElementById('chartTiendaHist').innerHTML=''; document.getElementById('tiendaComposicion').innerHTML=''; document.getElementById('tblTiendaHist').innerHTML='';
+      document.getElementById('tiendaAuditSkuDetail').innerHTML=''; document.getElementById('tiendaAuditSkuHead').textContent='';
       return;
     }
     const rows = fa.filter(r=>r[1]===si).slice().sort((a,b)=>a[0]<b[0]?-1:1);
@@ -1315,7 +1439,7 @@
     document.getElementById('tiendaStatus').innerHTML =
       `<span class="status-badge ${active?'activa':'cerrada'}">${active?'Activa':'Cerrada'+(closeDate?' · '+fmtDateHuman(closeDate):'')}</span>`;
 
-    if(!rows.length){ document.getElementById('tiendaKpis').innerHTML = '<div class="card-note">Sin auditorías en el período seleccionado.</div>'; document.getElementById('chartTiendaHist').innerHTML=''; document.getElementById('tiendaComposicion').innerHTML=''; document.getElementById('tblTiendaHist').innerHTML=''; return; }
+    if(!rows.length){ document.getElementById('tiendaKpis').innerHTML = '<div class="card-note">Sin auditorías en el período seleccionado.</div>'; document.getElementById('chartTiendaHist').innerHTML=''; document.getElementById('tiendaComposicion').innerHTML=''; document.getElementById('tblTiendaHist').innerHTML=''; document.getElementById('tiendaAuditSkuDetail').innerHTML=''; document.getElementById('tiendaAuditSkuHead').textContent=''; return; }
 
     const detectadoRows = rows.filter(r=>r[8]<0);
     const detectado = -detectadoRows.reduce((s,r)=>s+r[8],0);
@@ -1353,14 +1477,37 @@
       tooltipFmt:c=>`<b>${c.label}</b><br>${fmtUSD(c.value)} (PVP)`});
 
     let html = '<thead><tr><th>Fecha</th><th>Auditor</th><th class="num">Inventario</th><th class="num">A cobrar (costo)</th><th class="num">Score</th><th>Riesgo</th><th>Estado cobro</th></tr></thead><tbody>';
-    rows.slice().reverse().forEach(r=>{
-      html += `<tr><td>${fmtDateHuman(r[0])}</td><td>${escapeHtml(DATA.auditors[r[4]])}</td><td class="num">${fmtUSD(r[7])}</td>
+    const rowsDesc = rows.slice().reverse();
+    rowsDesc.forEach(r=>{
+      html += `<tr class="tr-clickable" data-date="${r[0]}" style="cursor:pointer;"><td>${fmtDateHuman(r[0])}</td><td>${escapeHtml(DATA.auditors[r[4]])}</td><td class="num">${fmtUSD(r[7])}</td>
         <td class="num">${fmtUSD(r[8])}</td><td class="num">${r[5]}</td>
         <td><span class="riesgo-chip" style="background:${RIESGO_COLOR[r[6]]}22;color:${RIESGO_COLOR[r[6]]}">${DATA.riesgos[r[6]]}</span></td>
         <td>${escapeHtml(DATA.estados[r[10]])}</td></tr>`;
     });
     html += '</tbody>';
-    document.getElementById('tblTiendaHist').innerHTML = html;
+    const tbl = document.getElementById('tblTiendaHist');
+    tbl.innerHTML = html;
+    tbl.querySelectorAll('tr[data-date]').forEach(tr=>{
+      tr.addEventListener('click', ()=>{
+        tbl.querySelectorAll('tr[data-date]').forEach(t=>t.classList.remove('tr-active'));
+        tr.classList.add('tr-active');
+        renderAuditSkuDetail(si, tr.dataset.date);
+      });
+    });
+    // por defecto, muestra el detalle de la auditoría más reciente
+    const defaultTr = rowsDesc.length ? tbl.querySelector('tr[data-date]') : null;
+    if(defaultTr){ defaultTr.classList.add('tr-active'); renderAuditSkuDetail(si, defaultTr.dataset.date); }
+  }
+
+  function renderAuditSkuDetail(si, date){
+    document.getElementById('tiendaAuditSkuHead').textContent = 'auditoría del ' + fmtDateHuman(date);
+    const rowsSku = DATA.skus.filter(r=>r[3]===si && r[0]===date && r[1]===0); // FALTANTE puro (tipoIdx 0), excluye FALTANTE CRUCE
+    const el = document.getElementById('tiendaAuditSkuDetail');
+    if(!rowsSku.length){ el.innerHTML = '<div class="card-note">Sin SKUs en faltante (excluyendo cruces) para esta auditoría.</div>'; return; }
+    const items = rowsSku.map(r=>({label:DATA.skuDesc[r[2]], value:Math.abs(r[4])}))
+      .sort((a,b)=>b.value-a.value).slice(0,10);
+    rankedList(el, items, {colorFor:()=>'var(--critical)', valueFmt:fmtUSD,
+      tooltipFmt:r=>`<b>${r.label}</b><br>${fmtUSD(r.value)} en faltante`});
   }
 
   function renderTiendaRiesgoLateral(fa){
@@ -1389,6 +1536,42 @@
     });
   }
 
+  // Todas las líneas de negocio con auditorías en el período, ordenadas de
+  // mayor a menor faltante (resultado neto a cobrar costo — sin filtrar por
+  // signo, así una línea con más sobrante que faltante también se ve).
+  function renderLineaFaltanteLateral(fa){
+    const byLine = {};
+    fa.forEach(r=>{ byLine[r[2]] = (byLine[r[2]]||0) + r[8]; });
+    const rows = DATA.lines.map((label,i)=>({label, value:byLine[i]||0, idx:i}))
+      .filter(r=>r.value!==0)
+      .sort((a,b)=>a.value-b.value);
+    const el = document.getElementById('lineaFaltanteLateral');
+    rankedList(el, rows, {
+      colorFor:r=>r.value<0?'var(--critical)':'var(--good)', valueFmt:fmtUSD,
+      tooltipFmt:r=>`<b>${r.label}</b><br>${fmtUSD(r.value)} resultado neto (a cobrar costo)`});
+    el.querySelectorAll('.rlist-row').forEach((row,i)=>{
+      row.classList.add('rlist-clickable');
+      row.dataset.line = rows[i].idx;
+      row.addEventListener('click', ()=>{
+        const li = row.dataset.line;
+        const selLinea = document.getElementById('selLinea');
+        if([...selLinea.options].some(o=>o.value===li)){
+          selLinea.value = li;
+          populateTiendaSelect();
+          renderTiendaProfile(lastFilteredAudits);
+          highlightLineaLateral();
+        }
+      });
+    });
+    highlightLineaLateral();
+  }
+  function highlightLineaLateral(){
+    const li = document.getElementById('selLinea').value;
+    document.querySelectorAll('#lineaFaltanteLateral .rlist-row').forEach(row=>{
+      row.classList.toggle('rlist-active', row.dataset.line===li);
+    });
+  }
+
   let lastFilteredAudits = [];
   function renderTiendaHistorial(fa){
     lastFilteredAudits = fa;
@@ -1398,9 +1581,10 @@
     else { document.getElementById('selTienda').innerHTML = ''; }
     renderTiendaProfile(fa);
     renderTiendaRiesgoLateral(fa);
+    renderLineaFaltanteLateral(fa);
   }
 
-  document.getElementById('selLinea').addEventListener('change', ()=>{ populateTiendaSelect(); renderTiendaProfile(lastFilteredAudits); });
+  document.getElementById('selLinea').addEventListener('change', ()=>{ populateTiendaSelect(); renderTiendaProfile(lastFilteredAudits); highlightLineaLateral(); });
   document.getElementById('selTienda').addEventListener('change', ()=>{ renderTiendaProfile(lastFilteredAudits); });
 
   // ============ KPI Auditores — verificación para pago (controles propios, independientes del filtro superior) ============
