@@ -268,7 +268,17 @@
   .seg button.active{ background:var(--accent); color:#fff; }
   .mes-toolbar{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:10px; }
   .mes-toolbar .tb-lbl{ font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--ink-muted); }
-  #subpanel-mensual .month-detail{ max-height:640px; }
+  #subpanel-mensual .month-detail{ max-height:none; overflow:visible; padding:0; }
+  .month-pills{ display:flex; flex-wrap:wrap; gap:6px; margin:6px 0 14px; }
+  .month-pills .month-item{ display:inline-flex; align-items:center; gap:8px; padding:6px 12px; border:1px solid var(--border); border-radius:100px; background:var(--surface-2); color:var(--ink-2); font-size:12px; font-weight:600; cursor:pointer; }
+  .month-pills .month-item:hover{ background:var(--accent-wash); }
+  .month-pills .month-item.active{ background:var(--accent); border-color:var(--accent); color:#fff; }
+  .month-pills .month-item .count-badge{ background:rgba(0,0,0,.08); color:inherit; border-radius:100px; padding:1px 8px; font-size:11px; }
+  .month-pills .month-item.active .count-badge{ background:rgba(255,255,255,.25); }
+  .pareto-wrap{ max-height:560px; overflow:auto; }
+  table.dtable tr.p-rest td{ color:var(--ink-muted); }
+  table.dtable tr.p-cut td{ background:var(--accent-wash); font-size:11.5px; font-weight:700; color:var(--accent); text-align:center; }
+  .pareto-note{ margin:2px 0 8px; }
   table.dtable tr.grp td{ font-weight:700; cursor:pointer; user-select:none; }
   table.dtable tr.grp-l td{ background:var(--accent-wash); border-bottom:1px solid var(--border); }
   table.dtable tr.grp-z td{ background:var(--surface-2); }
@@ -310,8 +320,8 @@
     <button class="preset" data-preset="all">Todo el histórico</button>
     <button class="preset" data-preset="90d">Últimos 90 días</button>
     <button class="preset" data-preset="6m">Últimos 6 meses</button>
-    <button class="preset" data-preset="ytd">2026 (YTD)</button>
-    <button class="preset" data-preset="py">2025 completo</button>
+    <button class="preset" data-preset="ytd" id="presetYtd">Año vigente (YTD)</button>
+    <button class="preset" data-preset="py" id="presetPy">Año anterior</button>
     <div class="ctrl-sep"></div>
     <div class="ctrl-group" style="position:relative;">
       <button class="preset" id="btnExclToggle" type="button">Excluir ▾</button>
@@ -407,7 +417,7 @@
   </div>
 
   <div class="sec-title"><span class="accent-bar"></span>Exposición por sociedad y zona</div>
-  <p class="sec-note">% Merma = faltante detectado ÷ inventario auditado (acumulado del período). Referencia de mercado retail: 1.0–1.5%.</p>
+  <p class="sec-note">% Merma = faltante detectado ÷ inventario de cada auditoría (ponderado: cada auditoría se mide contra su propio inventario, sin tomar el stock de la empresa). Referencia de mercado retail: 1.0–1.5%.</p>
   <div class="row2">
     <div class="card">
       <div class="card-hd"><h3>Por sociedad</h3></div>
@@ -473,6 +483,9 @@
         <p class="sec-note" style="margin:-4px 0 4px;">Excluye ítems marcados como cruce (faltante compensado con un sobrante de otro SKU en la misma auditoría) — se muestra solo el faltante real, no cruzado.</p>
         <div id="tiendaAuditSkuDetail"></div>
 
+        <div class="card-hd" style="margin-top:16px;"><h3>SKUs con mayor sobrante</h3><span class="card-note">80/20 · excluye cruces</span></div>
+        <div id="tiendaAuditSobrantes"></div>
+
         <div class="card-hd" style="margin-top:16px;"><h3>Cruces de la auditoría</h3><span class="card-note" id="tiendaCrucesHead"></span></div>
         <p class="sec-note" style="margin:-4px 0 4px;">Faltantes compensados con sobrantes de otro SKU dentro de la misma auditoría. Se muestran aquí para trazabilidad; no entran en el análisis de SKUs con diferencias.</p>
         <div id="tiendaCruces"></div>
@@ -500,22 +513,16 @@
   <!-- ===== Sub-pestaña: Auditorías realizadas por mes ===== -->
   <div class="subpanel" id="subpanel-mensual">
     <div class="kpi-grid" id="mensualKpis" style="margin-bottom:16px;"></div>
-    <p class="sec-note">Selecciona un mes (o todo el período) y el tipo de auditor. El detalle se agrupa por línea de negocio → zona → tienda: haz clic en una fila de línea o zona para desplegar/contraer. “A cobrar PVP” = RESULT. A COBRAR PVP del registro; “A cobrar costo” = RESULT. A COBRAR COSTO.</p>
+    <p class="sec-note">Selecciona un mes (o todo el período) y el tipo de auditor. El detalle viene agrupado por línea de negocio, con las tiendas ya desplegadas: haz clic en una línea para contraerla. “A cobrar PVP” = RESULT. A COBRAR PVP del registro; “A cobrar costo” = RESULT. A COBRAR COSTO.</p>
     <div class="card">
       <div class="mes-toolbar">
         <span class="tb-lbl">Tipo de auditor</span>
-        <div class="seg" id="segTipoAud" role="group">
-          <button type="button" data-tipo="todos">Todos</button>
-          <button type="button" data-tipo="Retail" class="active">Retail</button>
-          <button type="button" data-tipo="Coral">Coral</button>
-        </div>
-        <button class="preset" id="mesExpandAll" type="button">Expandir todo</button>
+        <div class="seg" id="segTipoAud" role="group"></div>
+        <button class="preset" id="mesExpandAll" type="button">Desplegar todo</button>
         <button class="preset" id="mesCollapseAll" type="button">Contraer todo</button>
       </div>
-      <div class="month-shell">
-        <div class="month-list" id="monthList"></div>
-        <div class="month-detail" id="monthDetail"></div>
-      </div>
+      <div class="month-pills" id="monthList"></div>
+      <div class="month-detail" id="monthDetail"></div>
     </div>
   </div>
 
@@ -560,13 +567,17 @@
     <div class="kpi-grid" id="skuKpis" style="margin-bottom:16px;"></div>
     <div class="row2">
       <div class="card">
-        <div class="card-hd"><h3>Top 15 SKUs — Mayor faltante (costo)</h3></div>
-        <div class="chart-wrap"><div class="chart-box" id="chartSkuFaltante"></div></div>
+        <div class="card-hd"><h3>Faltantes por SKU — 80/20</h3><span class="card-note">SKUs que concentran el 80% del monto</span></div>
+        <div id="paretoFaltante"></div>
       </div>
       <div class="card">
-        <div class="card-hd"><h3>Top 15 SKUs — Mayor reincidencia</h3><span class="card-note">n.º de auditorías distintas con faltante</span></div>
-        <div class="chart-wrap"><div class="chart-box" id="chartSkuReinc"></div></div>
+        <div class="card-hd"><h3>Sobrantes por SKU — 80/20</h3><span class="card-note">SKUs que concentran el 80% del monto</span></div>
+        <div id="paretoSobrante"></div>
       </div>
+    </div>
+    <div class="card" style="margin-bottom:16px;">
+      <div class="card-hd"><h3>SKUs con mayor reincidencia en faltante</h3><span class="card-note">n.º de auditorías distintas con faltante</span></div>
+      <div id="tblSkuReinc"></div>
     </div>
     <div class="row2">
       <div class="card">
@@ -580,10 +591,7 @@
         <div class="table-scroll"><table class="dtable" id="tblMalEstado"></table></div>
       </div>
     </div>
-    <div class="card">
-      <div class="card-hd"><h3>Distribución por tipo de hallazgo</h3></div>
-      <div class="chart-wrap"><div class="chart-box" id="chartSkuTipo"></div></div>
-    </div>
+    
   </div>
 
   <!-- ===== Sub-pestaña: Próximas auditorías ===== -->
@@ -894,6 +902,9 @@
   dateEndEl.min = MIN_DATE; dateEndEl.max = MAX_DATE;
   dateStartEl.value = MIN_DATE; dateEndEl.value = MAX_DATE;
   let selectedMonth = null;
+  const CUR_YEAR = +DATA.asOf.slice(0,4);          // año vigente según la fecha de corte de los datos
+  document.getElementById('presetYtd').textContent = CUR_YEAR+' (YTD)';
+  document.getElementById('presetPy').textContent = (CUR_YEAR-1)+' completo';
 
   document.querySelectorAll('.preset:not(.topn-btn)').forEach(btn=>{
     btn.addEventListener('click', ()=>{
@@ -903,8 +914,8 @@
       if(p==='all'){ dateStartEl.value=MIN_DATE; dateEndEl.value=MAX_DATE; }
       else if(p==='90d'){ dateEndEl.value=MAX_DATE; dateStartEl.value = addDays(MAX_DATE,-90) < MIN_DATE ? MIN_DATE : addDays(MAX_DATE,-90); }
       else if(p==='6m'){ dateEndEl.value=MAX_DATE; dateStartEl.value = addMonths(MAX_DATE,-6) < MIN_DATE ? MIN_DATE : addMonths(MAX_DATE,-6); }
-      else if(p==='ytd'){ dateStartEl.value='2026-01-01'; dateEndEl.value=MAX_DATE; }
-      else if(p==='py'){ dateStartEl.value='2025-01-01'; dateEndEl.value='2025-12-31'; }
+      else if(p==='ytd'){ dateStartEl.value=CUR_YEAR+'-01-01'; dateEndEl.value=MAX_DATE; }
+      else if(p==='py'){ dateStartEl.value=(CUR_YEAR-1)+'-01-01'; dateEndEl.value=(CUR_YEAR-1)+'-12-31'; }
       selectedMonth = null;
       applyFilters();
     });
@@ -1099,9 +1110,13 @@
     const pctRecOficial = netACobrar!==0 ? (cobradoTotal/Math.abs(netACobrar)*100) : 0;
     const pendRows = fa.filter(r=>DATA.estados[r[10]]==='Pendiente');
     const pendMonto = pendRows.reduce((s,r)=>s+Math.max(-r[8],0),0);
-    const invTotal = fa.reduce((s,r)=>s+r[7],0);
+    const invTotal = fa.reduce((s,r)=>s+r[7],0);   // suma de inventarios de TODAS las auditorías (re-auditorías cuentan varias veces)
+    const lastByStore = {};
+    fa.forEach(r=>{ const o = lastByStore[r[1]]; if(!o || r[0]>=o[0]) lastByStore[r[1]] = r; });
+    const stockUnico = Object.values(lastByStore).reduce((s,r)=>s+r[7],0);   // stock de la última auditoría de cada tienda
+    const nTiendasStock = Object.keys(lastByStore).length;
     const shrinkPct = invTotal>0 ? detectado/invTotal*100 : 0;
-    return {n, scoreAvg, nAC, pctAC: n?nAC/n*100:0, detectado, nDetectado:detectadoRows.length, cobradoTotal, pctRecOficial, pendMonto, pendN:pendRows.length, invTotal, shrinkPct};
+    return {n, scoreAvg, nAC, pctAC: n?nAC/n*100:0, detectado, nDetectado:detectadoRows.length, cobradoTotal, pctRecOficial, pendMonto, pendN:pendRows.length, invTotal, stockUnico, nTiendasStock, shrinkPct};
   }
 
   function auditorConcentration(fa){
@@ -1132,9 +1147,9 @@
 
     renderKpiGroup('kpiGrid', [
       { label:'Auditorías en el período', value:k.n.toLocaleString('en-US'), sub:new Set(fa.map(r=>r[1])).size+' tiendas visitadas', tone:'neutral' },
-      { label:'Monto auditado', value:fmtUSD(k.invTotal), sub:'inventario cubierto en el período', tone:'neutral' },
+      { label:'Stock auditado (por tienda)', value:fmtUSD(k.stockUnico), sub:k.nTiendasStock+' tiendas, última auditoría de cada una · las '+k.n+' auditorías suman '+fmtUSDk(k.invTotal)+' al repetir tiendas', tone:'neutral' },
       { label:'Faltante detectado (costo)', value:fmtUSD(k.detectado), sub:k.nDetectado+' auditorías con faltante neto en el período', tone:'neutral' },
-      { label:'% Merma', value:k.shrinkPct.toFixed(2)+'%', sub:'faltante sobre inventario auditado · referencia de mercado 1.0–1.5%', tone: k.shrinkPct>1?'warning':'good' },
+      { label:'% Merma', value:k.shrinkPct.toFixed(2)+'%', sub:'faltante ÷ inventario de cada auditoría (ponderado) · referencia de mercado 1.0–1.5%', tone: k.shrinkPct>1?'warning':'good' },
       { label:'% Recuperado', value:k.pctRecOficial.toFixed(1)+'%', sub:fmtUSD(k.cobradoTotal)+' cobrados de '+k.pendN+' casos pendientes de gestión', tone: k.pctRecOficial<20?'critical':'good' },
       { label:'Cobertura de tiendas activas', value:cov.p90+'%', sub:cov.n90+' de '+cov.nActivas+' en ≤90 días (hoy) · '+cov.p180+'% en ≤180d', tone: cov.p90>=90?'good':'warning' },
       { label:'% en riesgo alto/crítico', value:k.pctAC.toFixed(1)+'%', sub:k.nAC+' de '+k.n+' auditorías · score prom. '+k.scoreAvg.toFixed(1), tone: k.pctAC>15?'warning':'good' },
@@ -1349,10 +1364,10 @@
     return diffs.length ? diffs.reduce((s,v)=>s+v,0)/diffs.length : null;
   }
 
-  // ============ Auditorías realizadas por mes: tabla por auditor, agrupada ============
+  // ============ Auditorías realizadas por mes: por línea de negocio, tiendas desplegadas ============
   let mesTipo = 'Retail';                 // por defecto: auditores Retail
-  const mesOpen = new Set();              // nodos desplegados ('L<línea>' / 'Z<línea>|<zona>')
-  let lastMesFa = [], lastMesFaT = [], mesAllKeys = [];
+  const mesClosed = new Set();            // líneas contraídas por el usuario (por defecto todas desplegadas)
+  let lastMesFa = [], lastMesFaT = [], mesLineKeys = [];
   function mesTipoOK(r){ return mesTipo==='todos' || DATA.tiposAuditor[DATA.auditorTipoIdx[r[4]]]===mesTipo; }
   function pvpNet(r){ return (r.length>19 && r[19]!=null) ? r[19] : r[12]+r[15]+r[16]+r[17]; }   // RESULT. A COBRAR PVP del registro (si no viene, aproximación por componentes)
   function storeCE(si){ return (DATA.storeCE && DATA.storeCE[si]) || null; }  // centro SAP (opcional)
@@ -1371,23 +1386,41 @@
   }
   function moneyCell(v){ return `<td class="num ${moneyCls(v)}">${fmtUSD(v)}</td>`; }
 
+  // botones de tipo de auditor: Todos + los tipos de la hoja "Correos auditores" que tengan auditorías
+  function buildTipoSeg(){
+    const seg = document.getElementById('segTipoAud');
+    const present = new Set(DATA.audits.map(r=>DATA.tiposAuditor[DATA.auditorTipoIdx[r[4]]]));
+    const order = ['Retail','Coral'].concat(DATA.tiposAuditor.filter(t=>t!=='Retail' && t!=='Coral'));
+    const tipos = order.filter(t=>present.has(t));
+    seg.innerHTML = '<button type="button" data-tipo="todos">Todos</button>' + tipos.map(t=>`<button type="button" data-tipo="${escapeHtml(t)}">${escapeHtml(t)}</button>`).join('');
+    if(!tipos.includes(mesTipo)) mesTipo = 'todos';
+    seg.querySelectorAll('button').forEach(b=>{
+      b.classList.toggle('active', b.dataset.tipo===mesTipo);
+      b.addEventListener('click', ()=>{
+        seg.querySelectorAll('button').forEach(x=>x.classList.remove('active')); b.classList.add('active');
+        mesTipo = b.dataset.tipo;
+        renderMonthMenu(lastMesFa); renderMensualKpis(lastMesFa);
+      });
+    });
+  }
+
   function renderMonthMenu(fa){
     lastMesFa = fa;
     const faT = fa.filter(mesTipoOK);
-    const agg = monthAgg(faT).slice().sort((a,b)=>b.key<a.key?-1:1); // desc
+    const agg = monthAgg(faT).slice().sort((a,b)=>a.key<b.key?-1:1); // cronológico
     const listEl = document.getElementById('monthList');
     if(!agg.length){
-      listEl.innerHTML='<div class="card-note" style="padding:14px;">Sin auditorías en el rango para este tipo de auditor.</div>';
+      listEl.innerHTML='<div class="card-note">Sin auditorías en el rango para este tipo de auditor.</div>';
       document.getElementById('monthDetail').innerHTML=''; lastMesFaT=[]; return;
     }
-    if(!selectedMonth || (selectedMonth!=='ALL' && !agg.find(a=>a.key===selectedMonth))) selectedMonth = agg[0].key;
+    if(!selectedMonth || (selectedMonth!=='ALL' && !agg.find(a=>a.key===selectedMonth))) selectedMonth = 'ALL';
     listEl.innerHTML = `<div class="month-item ${selectedMonth==='ALL'?'active':''}" data-month="ALL"><span>Todo el período</span><span class="count-badge">${faT.length}</span></div>` +
       agg.map(a=>`
       <div class="month-item ${a.key===selectedMonth?'active':''}" data-month="${a.key}">
         <span>${monthLabel(a.key)}</span><span class="count-badge">${a.n}</span>
       </div>`).join('');
     listEl.querySelectorAll('.month-item').forEach(el=>{
-      el.addEventListener('click', ()=>{ selectedMonth = el.dataset.month; mesOpen.clear(); renderMonthMenu(fa); });
+      el.addEventListener('click', ()=>{ selectedMonth = el.dataset.month; renderMonthMenu(fa); });
     });
     lastMesFaT = faT;
     renderMonthDetail(faT, selectedMonth);
@@ -1396,70 +1429,39 @@
   function renderMonthDetail(faT, key){
     const rows = key==='ALL' ? faT : faT.filter(r=>monthKey(r[0])===key);
     const el = document.getElementById('monthDetail');
-    const keepScroll = el.scrollTop;
     const tot = mesSummary(rows);
-    let html = `<div class="month-detail-hd">${key==='ALL'?'Todo el período':monthLabel(key)} — ${tot.n} auditorías · ${tot.stores} tiendas · A cobrar PVP <span class="${moneyCls(tot.pvp)}">${fmtUSD(tot.pvp)}</span> · A cobrar costo <span class="${moneyCls(tot.costo)}">${fmtUSD(tot.costo)}</span> · ${tot.cerr}/${tot.n} informes cerrados</div>`;
+    let html = `<div class="month-detail-hd" style="font-size:13px;margin-bottom:10px;">${key==='ALL'?'Todo el período':monthLabel(key)} — ${tot.n} auditorías · ${tot.stores} tiendas · A cobrar PVP <span class="${moneyCls(tot.pvp)}">${fmtUSD(tot.pvp)}</span> · A cobrar costo <span class="${moneyCls(tot.costo)}">${fmtUSD(tot.costo)}</span> · ${tot.cerr}/${tot.n} informes cerrados</div>`;
     if(!rows.length){ el.innerHTML = html + '<div class="card-note">Sin auditorías para este mes y tipo de auditor.</div>'; return; }
 
-    // línea -> zona -> filas
     const byLine = new Map();
-    rows.forEach(r=>{
-      if(!byLine.has(r[2])) byLine.set(r[2], new Map());
-      const zm = byLine.get(r[2]);
-      if(!zm.has(r[3])) zm.set(r[3], []);
-      zm.get(r[3]).push(r);
-    });
-    const lineList = [...byLine.entries()].map(([li,zm])=>{
-      const all = [...zm.values()].flat();
-      return {li, zm, sm:mesSummary(all)};
-    }).sort((a,b)=>a.sm.pvp-b.sm.pvp);
+    rows.forEach(r=>{ if(!byLine.has(r[2])) byLine.set(r[2], []); byLine.get(r[2]).push(r); });
+    const lineList = [...byLine.entries()].map(([li,lr])=>({li, lr, sm:mesSummary(lr)})).sort((a,b)=>a.sm.pvp-b.sm.pvp);
+    mesLineKeys = lineList.map(L=>'L'+L.li);
 
-    mesAllKeys = [];
-    let h = `<table class="dtable"><thead><tr><th>Auditor</th><th>Fecha</th><th>CE</th><th>Tienda</th><th>Ref. informe</th><th class="num">A cobrar PVP</th><th class="num">A cobrar costo</th><th>Estado informe</th></tr></thead><tbody>`;
+    let h = `<div class="table-scroll"><table class="dtable"><thead><tr><th>Auditor</th><th>Fecha</th><th>CE</th><th>Tienda</th><th>Zona</th><th>Ref. informe</th><th class="num">A cobrar PVP</th><th class="num">A cobrar costo</th><th>Estado informe</th></tr></thead><tbody>`;
     lineList.forEach(L=>{
-      const lk = 'L'+L.li; mesAllKeys.push(lk);
-      const openL = mesOpen.has(lk);
-      h += `<tr class="grp grp-l" data-k="${lk}"><td colspan="5"><span class="caret">${openL?'▾':'▸'}</span>${escapeHtml(DATA.lines[L.li])} <span class="card-note" style="font-weight:500;">· ${L.sm.n} auditorías · ${L.sm.stores} tiendas</span></td>${moneyCell(L.sm.pvp)}${moneyCell(L.sm.costo)}<td>${estadoChipGrp(L.sm)}</td></tr>`;
-      if(!openL) return;
-      const zl = [...L.zm.entries()].map(([zi,zr])=>({zi, zr, sm:mesSummary(zr)})).sort((a,b)=>a.sm.pvp-b.sm.pvp);
-      zl.forEach(Z=>{
-        const zk = 'Z'+L.li+'|'+Z.zi; mesAllKeys.push(zk);
-        const openZ = mesOpen.has(zk);
-        h += `<tr class="grp grp-z" data-k="${zk}"><td colspan="5"><span class="caret">${openZ?'▾':'▸'}</span>Zona ${escapeHtml(DATA.zones[Z.zi])} <span class="card-note" style="font-weight:500;">· ${Z.sm.n} auditorías · ${Z.sm.stores} tiendas</span></td>${moneyCell(Z.sm.pvp)}${moneyCell(Z.sm.costo)}<td>${estadoChipGrp(Z.sm)}</td></tr>`;
-        if(!openZ) return;
-        Z.zr.slice().sort((a,b)=>pvpNet(a)-pvpNet(b) || (a[0]<b[0]?-1:1)).forEach(r=>{
-          const ce = storeCE(r[1]), ref = refInforme(r), est = DATA.funnelStages[r[14]];
-          h += `<tr class="leaf"><td>${escapeHtml(DATA.auditors[r[4]])}</td><td>${fmtDateHuman(r[0])}</td><td>${ce?escapeHtml(ce):'—'}</td><td>${escapeHtml(DATA.stores[r[1]])}</td><td>${ref?escapeHtml(ref):'—'}</td>${moneyCell(pvpNet(r))}${moneyCell(r[8])}<td><span class="est-chip" style="--c:${ESTADO_INF_COLOR[r[14]]}">${escapeHtml(est)}</span></td></tr>`;
-        });
+      const lk = 'L'+L.li, open = !mesClosed.has(lk);
+      h += `<tr class="grp grp-l" data-k="${lk}"><td colspan="6"><span class="caret">${open?'▾':'▸'}</span>${escapeHtml(DATA.lines[L.li])} <span class="card-note" style="font-weight:500;">· ${L.sm.n} auditorías · ${L.sm.stores} tiendas</span></td>${moneyCell(L.sm.pvp)}${moneyCell(L.sm.costo)}<td>${estadoChipGrp(L.sm)}</td></tr>`;
+      if(!open) return;
+      L.lr.slice().sort((a,b)=>DATA.stores[a[1]].localeCompare(DATA.stores[b[1]]) || (a[0]<b[0]?-1:1)).forEach(r=>{
+        const ce = storeCE(r[1]), ref = refInforme(r), est = DATA.funnelStages[r[14]];
+        h += `<tr class="leaf"><td>${escapeHtml(DATA.auditors[r[4]])}</td><td>${fmtDateHuman(r[0])}</td><td>${ce?escapeHtml(ce):'—'}</td><td>${escapeHtml(DATA.stores[r[1]])}</td><td>${escapeHtml(DATA.zones[r[3]])}</td><td>${ref?escapeHtml(ref):'—'}</td>${moneyCell(pvpNet(r))}${moneyCell(r[8])}<td><span class="est-chip" style="--c:${ESTADO_INF_COLOR[r[14]]}">${escapeHtml(est)}</span></td></tr>`;
       });
     });
-    h += `<tr class="tot"><td colspan="5">Total</td>${moneyCell(tot.pvp)}${moneyCell(tot.costo)}<td>${estadoChipGrp(tot)}</td></tr></tbody></table>`;
+    h += `<tr class="tot"><td colspan="6">Total</td>${moneyCell(tot.pvp)}${moneyCell(tot.costo)}<td>${estadoChipGrp(tot)}</td></tr></tbody></table></div>`;
     el.innerHTML = html + h;
-    el.scrollTop = keepScroll;
     el.querySelectorAll('tr.grp').forEach(tr=>{
       tr.addEventListener('click', ()=>{
         const k = tr.dataset.k;
-        if(mesOpen.has(k)) mesOpen.delete(k); else mesOpen.add(k);
+        if(mesClosed.has(k)) mesClosed.delete(k); else mesClosed.add(k);
         renderMonthDetail(faT, key);
       });
     });
   }
 
-  document.querySelectorAll('#segTipoAud button').forEach(b=>{
-    b.addEventListener('click', ()=>{
-      document.querySelectorAll('#segTipoAud button').forEach(x=>x.classList.remove('active'));
-      b.classList.add('active');
-      mesTipo = b.dataset.tipo; mesOpen.clear();
-      renderMonthMenu(lastMesFa); renderMensualKpis(lastMesFa);
-    });
-  });
-  // "Expandir todo" abre línea -> zona -> tienda; hace falta iterar porque las zonas solo existen cuando su línea está abierta
-  document.getElementById('mesExpandAll').addEventListener('click', ()=>{
-    for(let i=0;i<3;i++){ mesAllKeys.forEach(k=>mesOpen.add(k)); renderMonthDetail(lastMesFaT, selectedMonth); }
-  });
-  document.getElementById('mesCollapseAll').addEventListener('click', ()=>{
-    mesOpen.clear(); renderMonthDetail(lastMesFaT, selectedMonth);
-  });
+  buildTipoSeg();
+  document.getElementById('mesExpandAll').addEventListener('click', ()=>{ mesClosed.clear(); renderMonthDetail(lastMesFaT, selectedMonth); });
+  document.getElementById('mesCollapseAll').addEventListener('click', ()=>{ mesLineKeys.forEach(k=>mesClosed.add(k)); renderMonthDetail(lastMesFaT, selectedMonth); });
 
   // ============ YoY (always full history) ============
   function renderYoY(){
@@ -1524,21 +1526,22 @@
   function renderLineaCounts(fa){
     const by = {};
     fa.forEach(r=>{
-      const o = by[r[2]] || (by[r[2]] = {n:0, stores:new Set(), falt:0});
+      const o = by[r[2]] || (by[r[2]] = {n:0, stores:new Set(), falt:0, last:{}});
       o.n++; o.stores.add(r[1]); if(r[8]<0) o.falt += -r[8];
+      const lr = o.last[r[1]]; if(!lr || r[0]>=lr[0]) o.last[r[1]] = r;
     });
-    const rows = DATA.lines.map((label,i)=>({label, n:by[i]?by[i].n:0, stores:by[i]?by[i].stores.size:0, falt:by[i]?by[i].falt:0}))
+    const rows = DATA.lines.map((label,i)=>({label, n:by[i]?by[i].n:0, stores:by[i]?by[i].stores.size:0, falt:by[i]?by[i].falt:0, stock:by[i]?Object.values(by[i].last).reduce((s,x)=>s+x[7],0):0}))
       .filter(r=>r.n>0).sort((a,b)=>b.n-a.n || a.label.localeCompare(b.label));
     const tbl = document.getElementById('tblLineaCount');
     if(!rows.length){ tbl.innerHTML = '<tr><td class="card-note" style="padding:10px 0;">Sin auditorías en el rango seleccionado.</td></tr>'; return; }
-    const tot = rows.reduce((a,r)=>({n:a.n+r.n, falt:a.falt+r.falt}), {n:0, falt:0});
+    const tot = rows.reduce((a,r)=>({n:a.n+r.n, falt:a.falt+r.falt, stock:a.stock+r.stock}), {n:0, falt:0, stock:0});
     const totStores = new Set(fa.map(r=>r[1])).size;
-    let html = '<thead><tr><th>Línea de negocio</th><th class="num">N.º auditorías</th><th class="num">% del total</th><th class="num">Tiendas auditadas</th><th class="num">Faltante (costo)</th></tr></thead><tbody>';
+    let html = '<thead><tr><th>Línea de negocio</th><th class="num">N.º auditorías</th><th class="num">% del total</th><th class="num">Tiendas auditadas</th><th class="num" title="Suma del inventario de la última auditoría de cada tienda de la línea">Stock auditado</th><th class="num">Faltante (costo)</th></tr></thead><tbody>';
     rows.forEach(r=>{
       const pct = r.n/tot.n*100;
-      html += `<tr><td>${escapeHtml(r.label)}</td><td class="num">${r.n}</td><td class="num">${pct.toFixed(1)}%<span class="mini-track"><i style="width:${pct.toFixed(1)}%"></i></span></td><td class="num">${r.stores}</td><td class="num">${fmtUSD(r.falt)}</td></tr>`;
+      html += `<tr><td>${escapeHtml(r.label)}</td><td class="num">${r.n}</td><td class="num">${pct.toFixed(1)}%<span class="mini-track"><i style="width:${pct.toFixed(1)}%"></i></span></td><td class="num">${r.stores}</td><td class="num">${fmtUSD(r.stock)}</td><td class="num">${fmtUSD(r.falt)}</td></tr>`;
     });
-    html += `<tr class="tot"><td>Total</td><td class="num">${tot.n}</td><td class="num">100%</td><td class="num">${totStores}</td><td class="num">${fmtUSD(tot.falt)}</td></tr></tbody>`;
+    html += `<tr class="tot"><td>Total</td><td class="num">${tot.n}</td><td class="num">100%</td><td class="num">${totStores}</td><td class="num">${fmtUSD(tot.stock)}</td><td class="num">${fmtUSD(tot.falt)}</td></tr></tbody>`;
     tbl.innerHTML = html;
   }
   function renderAuditorLoad(fa){
@@ -1581,6 +1584,38 @@
   const SKU_TIPOS_INCLUIDOS = [0,1,4,5]; // FALTANTE, SOBRANTE, MAL ESTADO, CADUCADOS
   const skuTotalIncluido = DATA.skus.filter(r=>SKU_TIPOS_INCLUIDOS.includes(r[1])).length;
 
+  // Tabla 80/20: ordena por monto, muestra los SKUs que acumulan el 80% y permite ver el resto.
+  const paretoOpen = {};
+  function paretoTable(el, items, o){
+    o = o || {};
+    const rows = items.slice().sort((a,b)=>b.value-a.value);
+    const total = rows.reduce((s,r)=>s+r.value,0);
+    if(!rows.length || total<=0){ el.innerHTML = '<div class="card-note">'+(o.empty||'Sin registros en el rango seleccionado.')+'</div>'; return; }
+    let acc = 0, cut = rows.length;
+    for(let i=0;i<rows.length;i++){ acc += rows[i].value; if(acc/total >= 0.8){ cut = i+1; break; } }
+    const open = !!paretoOpen[el.id];
+    const shown = open ? rows.slice(0,300) : rows.slice(0,cut);
+    let uAny = false, uTot = 0; rows.forEach(r=>{ if(r.units!=null){ uAny = true; uTot += r.units; } });
+    let html = `<div class="card-note pareto-note"><b>${cut}</b> de ${rows.length} SKUs concentran el 80% (${fmtUSD(total)}${uAny?' · '+fmtU(uTot)+' u.':''})</div>`;
+    html += '<div class="pareto-wrap"><table class="dtable"><thead><tr><th>#</th><th>SKU — Descripción</th><th class="num">Unid.</th><th class="num">Monto (costo)</th><th class="num">%</th><th class="num">% acum.</th></tr></thead><tbody>';
+    let cum = 0;
+    shown.forEach((r,i)=>{
+      cum += r.value;
+      if(open && i===cut) html += `<tr class="p-cut"><td colspan="6">▲ 80% del monto · a partir de aquí, el 20% restante</td></tr>`;
+      html += `<tr class="${i>=cut?'p-rest':''}"><td class="num">${i+1}</td><td style="white-space:normal;min-width:220px;">${escapeHtml(r.label)}</td><td class="num">${fmtU(r.units)}</td><td class="num">${fmtUSD(r.value)}</td><td class="num">${(r.value/total*100).toFixed(1)}%</td><td class="num">${(cum/total*100).toFixed(0)}%</td></tr>`;
+    });
+    html += '</tbody></table></div>';
+    if(rows.length>cut) html += `<button type="button" class="preset pareto-toggle" style="margin-top:8px;">${open?'Ocultar el 20% restante':'Ver los '+(rows.length-cut)+' SKUs restantes'}</button>`;
+    el.innerHTML = html;
+    const b = el.querySelector('.pareto-toggle');
+    if(b) b.addEventListener('click', ()=>{ paretoOpen[el.id] = !paretoOpen[el.id]; paretoTable(el, items, o); });
+  }
+  function skuPareto(rows, sign){   // rows: líneas de SKU de un mismo tipo -> items por SKU
+    const by = {};
+    rows.forEach(r=>{ (by[r[2]] = by[r[2]] || []).push(r); });
+    return Object.entries(by).map(([idx,rs])=>({label:DATA.skuDesc[+idx], value:Math.abs(rs.reduce((s,r)=>s+r[4],0)), units:sumU(rs)}));
+  }
+
   function renderSkuSection(fsAll){
     const fs = fsAll.filter(r=>SKU_TIPOS_INCLUIDOS.includes(r[1]));   // sin FALTANTE CRUCE / SOBRANTE CRUCE
     document.getElementById('skuRangeNote').textContent =
@@ -1591,52 +1626,34 @@
     const faltTotal = -faltAll.reduce((s,r)=>s+r[4],0);
     const sobrTotal = sobrAll.reduce((s,r)=>s+r[4],0);
     const cadMal = fs.filter(r=>[4,5].includes(r[1]));
-    const nCadMal = cadMal.length;
     const montoCadMal = cadMal.reduce((s,r)=>s+Math.abs(r[4]),0);
     const skuKpiCards = [
       { label:'Líneas analizadas', value:fs.length, sub:'del período seleccionado', stripe:'var(--accent)' },
       { label:'Faltante total (SKU)', value:fmtUSD(faltTotal), sub:'costo'+uTxt(sumU(faltAll)), stripe:'var(--critical)' },
       { label:'Sobrante total (SKU)', value:fmtUSD(sobrTotal), sub:'costo'+uTxt(sumU(sobrAll)), stripe:'var(--good)' },
-      { label:'Caducados + mal estado', value:nCadMal+' líneas', sub:fmtUSD(montoCadMal)+' en costo'+uTxt(sumU(cadMal)), stripe:'var(--warning)' },
+      { label:'Caducados + mal estado', value:cadMal.length+' líneas', sub:fmtUSD(montoCadMal)+' en costo'+uTxt(sumU(cadMal)), stripe:'var(--warning)' },
     ];
     document.getElementById('skuKpis').innerHTML = skuKpiCards.map(c=>`
       <div class="kpi" style="--stripe:${c.stripe}"><div class="kpi-label">${c.label}</div><div class="kpi-value num" style="font-size:19px;">${c.value}</div><div class="kpi-sub">${c.sub}</div></div>`).join('');
 
-    const faltRows = faltAll;
+    paretoTable(document.getElementById('paretoFaltante'), skuPareto(faltAll), {empty:'Sin faltantes en el rango seleccionado.'});
+    paretoTable(document.getElementById('paretoSobrante'), skuPareto(sobrAll), {empty:'Sin sobrantes en el rango seleccionado.'});
 
-    // top faltante por monto (con unidades)
-    const byDescMonto = {};
-    faltRows.forEach(r=>{
-      const o = byDescMonto[r[2]] || (byDescMonto[r[2]] = {v:0, rows:[]});
-      o.v += r[4]; o.rows.push(r);
-    });
-    const topMonto = Object.entries(byDescMonto).map(([idx,o])=>({label:DATA.skuDesc[+idx], value:o.v, units:sumU(o.rows)}))
-      .sort((a,b)=>a.value-b.value).slice(0,15);
-    rankedList(document.getElementById('chartSkuFaltante'), topMonto, {
-      colorFor:()=>'var(--critical)', valueFmt:fmtUSD,
-      tooltipFmt:r=>`<b>${r.label}</b><br>${fmtUSD(r.value)} en faltantes${r.units!=null?'<br>'+fmtU(r.units)+' unidades':''}`});
-
-    // top reincidencia (fechas distintas por SKU)
-    const byDescDates = {};
-    faltRows.forEach(r=>{ if(!byDescDates[r[2]]) byDescDates[r[2]] = {dates:new Set(), monto:0, rows:[]}; byDescDates[r[2]].dates.add(r[0]); byDescDates[r[2]].monto += r[4]; byDescDates[r[2]].rows.push(r); });
-    const topReinc = Object.entries(byDescDates).map(([idx,o])=>({label:DATA.skuDesc[+idx], value:o.dates.size, monto:o.monto, units:sumU(o.rows)}))
-      .filter(r=>r.value>=2).sort((a,b)=>b.value-a.value || a.monto-b.monto).slice(0,15);
-    rankedList(document.getElementById('chartSkuReinc'), topReinc, {
-      colorFor:()=>'var(--serious)', valueFmt:v=>v+'×',
-      tooltipFmt:r=>`<b>${r.label}</b><br>${r.value} auditorías distintas<br>${fmtUSD(r.monto)} acumulado${r.units!=null?'<br>'+fmtU(r.units)+' unidades':''}`});
+    // reincidencia: SKUs con faltante en 2+ auditorías distintas (unidades tras la descripción)
+    const byDesc = {};
+    faltAll.forEach(r=>{ const o = byDesc[r[2]] || (byDesc[r[2]] = {dates:new Set(), monto:0, rows:[]}); o.dates.add(r[0]+'|'+r[3]); o.monto += r[4]; o.rows.push(r); });
+    const topReinc = Object.entries(byDesc).map(([idx,o])=>({label:DATA.skuDesc[+idx], veces:o.dates.size, monto:Math.abs(o.monto), units:sumU(o.rows)}))
+      .filter(r=>r.veces>=2).sort((a,b)=>b.veces-a.veces || b.monto-a.monto).slice(0,15);
+    const el = document.getElementById('tblSkuReinc');
+    if(!topReinc.length){ el.innerHTML = '<div class="card-note">Sin SKUs con faltante repetido en el rango seleccionado.</div>'; }
+    else {
+      let h = '<div class="table-scroll"><table class="dtable"><thead><tr><th>#</th><th>SKU — Descripción</th><th class="num">Unid.</th><th class="num">Auditorías</th><th class="num">Monto (costo)</th></tr></thead><tbody>';
+      topReinc.forEach((r,i)=>{ h += `<tr><td class="num">${i+1}</td><td style="white-space:normal;">${escapeHtml(r.label)}</td><td class="num">${fmtU(r.units)}</td><td class="num">${r.veces}×</td><td class="num">${fmtUSD(r.monto)}</td></tr>`; });
+      el.innerHTML = h + '</tbody></table></div>';
+    }
 
     renderSkuTable('tblCaducados','caducadosHead', fs.filter(r=>r[1]===5), 'Caducados');
     renderSkuTable('tblMalEstado','malEstadoHead', fs.filter(r=>r[1]===4), 'Mal estado');
-
-    // distribución por tipo de hallazgo
-    const byTipo = {};
-    fs.forEach(r=>{ if(!byTipo[r[1]]) byTipo[r[1]] = {n:0, costo:0, rows:[]}; byTipo[r[1]].n++; byTipo[r[1]].costo += r[4]; byTipo[r[1]].rows.push(r); });
-    const tipoRows = DATA.tipos.map((label,i)=>({label, value:byTipo[i]?byTipo[i].n:0, costo:byTipo[i]?byTipo[i].costo:0, units:byTipo[i]?sumU(byTipo[i].rows):null}))
-      .filter(r=>r.value>0).sort((a,b)=>b.value-a.value);
-    hBarChart(document.getElementById('chartSkuTipo'), tipoRows, {
-      colorFor:r=> r.label.includes('FALTANTE') ? 'var(--critical)' : r.label.includes('SOBRANTE') ? 'var(--good)' : 'var(--warning)',
-      valueFmt:v=>v,
-      tooltipFmt:r=>`<b>${r.label}</b><br>${r.value} líneas<br>${fmtUSD(r.costo)} costo neto${r.units!=null?'<br>'+fmtU(r.units)+' unidades':''}`});
   }
   function renderSkuTable(tableId, headId, rows, label){
     const total = rows.reduce((s,r)=>s+Math.abs(r[4]),0);
@@ -1647,8 +1664,8 @@
       .sort((a,b)=>b.monto-a.monto).slice(0,10);
     const tbl = document.getElementById(tableId);
     if(!top.length){ tbl.innerHTML = '<tr><td class="card-note" style="padding:10px 0;">Sin registros de '+label.toLowerCase()+' en el rango seleccionado.</td></tr>'; return; }
-    let html = '<thead><tr><th>SKU — Descripción</th><th class="num">Casos</th><th class="num">Unidades</th><th class="num">Monto (costo)</th></tr></thead><tbody>';
-    top.forEach(r=>{ html += `<tr><td>${escapeHtml(r.label)}</td><td class="num">${r.n}</td><td class="num">${fmtU(r.units)}</td><td class="num">${fmtUSD(r.monto)}</td></tr>`; });
+    let html = '<thead><tr><th>SKU — Descripción</th><th class="num">Unid.</th><th class="num">Casos</th><th class="num">Monto (costo)</th></tr></thead><tbody>';
+    top.forEach(r=>{ html += `<tr><td style="white-space:normal;">${escapeHtml(r.label)}</td><td class="num">${fmtU(r.units)}</td><td class="num">${r.n}</td><td class="num">${fmtUSD(r.monto)}</td></tr>`; });
     html += '</tbody>';
     tbl.innerHTML = html;
   }
@@ -1686,7 +1703,7 @@
       document.getElementById('tiendaStatus').innerHTML = '';
       document.getElementById('tiendaKpis').innerHTML = '<div class="card-note">Sin auditorías en el período seleccionado.</div>';
       document.getElementById('chartTiendaHist').innerHTML=''; document.getElementById('tiendaComposicion').innerHTML=''; document.getElementById('tblTiendaHist').innerHTML='';
-      document.getElementById('tiendaAuditSkuDetail').innerHTML=''; document.getElementById('tiendaCruces').innerHTML=''; document.getElementById('tiendaCrucesHead').textContent=''; document.getElementById('tiendaAuditSkuHead').textContent='';
+      document.getElementById('tiendaAuditSkuDetail').innerHTML=''; document.getElementById('tiendaCruces').innerHTML=''; document.getElementById('tiendaAuditSobrantes').innerHTML=''; document.getElementById('tiendaCrucesHead').textContent=''; document.getElementById('tiendaAuditSkuHead').textContent='';
       return;
     }
     const rows = fa.filter(r=>r[1]===si).slice().sort((a,b)=>a[0]<b[0]?-1:1);
@@ -1695,7 +1712,7 @@
     document.getElementById('tiendaStatus').innerHTML =
       `<span class="status-badge ${active?'activa':'cerrada'}">${active?'Activa':'Cerrada'+(closeDate?' · '+fmtDateHuman(closeDate):'')}</span>`;
 
-    if(!rows.length){ document.getElementById('tiendaKpis').innerHTML = '<div class="card-note">Sin auditorías en el período seleccionado.</div>'; document.getElementById('chartTiendaHist').innerHTML=''; document.getElementById('tiendaComposicion').innerHTML=''; document.getElementById('tblTiendaHist').innerHTML=''; document.getElementById('tiendaAuditSkuDetail').innerHTML=''; document.getElementById('tiendaCruces').innerHTML=''; document.getElementById('tiendaCrucesHead').textContent=''; document.getElementById('tiendaAuditSkuHead').textContent=''; return; }
+    if(!rows.length){ document.getElementById('tiendaKpis').innerHTML = '<div class="card-note">Sin auditorías en el período seleccionado.</div>'; document.getElementById('chartTiendaHist').innerHTML=''; document.getElementById('tiendaComposicion').innerHTML=''; document.getElementById('tblTiendaHist').innerHTML=''; document.getElementById('tiendaAuditSkuDetail').innerHTML=''; document.getElementById('tiendaCruces').innerHTML=''; document.getElementById('tiendaAuditSobrantes').innerHTML=''; document.getElementById('tiendaCrucesHead').textContent=''; document.getElementById('tiendaAuditSkuHead').textContent=''; return; }
 
     const detectadoRows = rows.filter(r=>r[8]<0);
     const detectado = -detectadoRows.reduce((s,r)=>s+r[8],0);
@@ -1758,17 +1775,8 @@
   function renderAuditSkuDetail(si, date){
     document.getElementById('tiendaAuditSkuHead').textContent = 'auditoría del ' + fmtDateHuman(date);
     const all = DATA.skus.filter(r=>r[3]===si && r[0]===date);
-    const rowsSku = all.filter(r=>r[1]===0); // FALTANTE puro (tipoIdx 0), excluye FALTANTE CRUCE
-    const el = document.getElementById('tiendaAuditSkuDetail');
-    if(!rowsSku.length){ el.innerHTML = '<div class="card-note">Sin SKUs en faltante (excluyendo cruces) para esta auditoría.</div>'; }
-    else {
-      const by = {};
-      rowsSku.forEach(r=>{ (by[r[2]] = by[r[2]] || []).push(r); });
-      const items = Object.entries(by).map(([idx,rs])=>({label:DATA.skuDesc[+idx], value:Math.abs(rs.reduce((s,r)=>s+r[4],0)), units:sumU(rs)}))
-        .sort((a,b)=>b.value-a.value).slice(0,10);
-      rankedList(el, items, {colorFor:()=>'var(--critical)', valueFmt:fmtUSD,
-        tooltipFmt:r=>`<b>${r.label}</b><br>${fmtUSD(r.value)} en faltante${r.units!=null?'<br>'+fmtU(r.units)+' unidades':''}`});
-    }
+    paretoTable(document.getElementById('tiendaAuditSkuDetail'), skuPareto(all.filter(r=>r[1]===0)), {empty:'Sin SKUs en faltante (excluyendo cruces) para esta auditoría.'});
+    paretoTable(document.getElementById('tiendaAuditSobrantes'), skuPareto(all.filter(r=>r[1]===1)), {empty:'Sin SKUs en sobrante (excluyendo cruces) para esta auditoría.'});
     renderCruces(all);
   }
 
@@ -2068,6 +2076,7 @@
   }
   renderPendientesAuditar();
 
-  applyFilters();
+  // Al abrir, el filtro de fechas queda en el año vigente (YTD)
+  document.getElementById('presetYtd').click();
 })();
 </script>

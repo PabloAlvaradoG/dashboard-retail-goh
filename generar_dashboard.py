@@ -314,14 +314,30 @@ try:
     correos = pd.read_excel(PATH, sheet_name='Correos auditores', engine='openpyxl')
     correos['Auditor responsable'] = correos['Auditor responsable'].astype(str).str.strip()
     correos['Tipo auditor'] = correos['Tipo auditor'].astype(str).str.strip()
-    tipo_map_raw = {norm_name(k): v for k, v in zip(correos['Auditor responsable'], correos['Tipo auditor'])}
+    _cc = 'Correo' if 'Correo' in correos.columns else None
+    if _cc:
+        correos['_tiene'] = correos[_cc].notna() & (correos[_cc].astype(str).str.strip() != '')
+        correos = correos.sort_values('_tiene', ascending=False, kind='stable')
+    tipo_map_raw = {}
+    for k, v in zip(correos['Auditor responsable'], correos['Tipo auditor']):
+        tipo_map_raw.setdefault(norm_name(k), v)
 except Exception:
     tipo_map_raw = {}
 
 tipos_auditor = sorted(set(tipo_map_raw.values())) + ['Sin clasificar']
 tipo_idx_map = {t: i for i, t in enumerate(tipos_auditor)}
 SIN_CLASIFICAR_IDX = tipo_idx_map['Sin clasificar']
-auditor_tipo_idx = [tipo_idx_map.get(tipo_map_raw.get(norm_name(a)), SIN_CLASIFICAR_IDX) for a in auditors]
+def _tipo_de(a):
+    n = norm_name(a)
+    if n in tipo_map_raw:
+        return tipo_map_raw[n]
+    import re as _re
+    hits = {v for k, v in tipo_map_raw.items() if k and _re.search(r'\b' + _re.escape(k) + r'\b', n)}
+    return hits.pop() if len(hits) == 1 else None
+auditor_tipo_idx = [tipo_idx_map.get(_tipo_de(a), SIN_CLASIFICAR_IDX) for a in auditors]
+_sin = [a for a, i in zip(auditors, auditor_tipo_idx) if i == SIN_CLASIFICAR_IDX]
+if _sin:
+    print('AVISO: auditores sin clasificar en Correos auditores:', _sin)
 
 # ---------- Detalle_SKUs ----------
 sku = pd.read_excel(PATH, sheet_name='Detalle_SKUs', header=2, engine='openpyxl')
