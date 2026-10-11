@@ -24,6 +24,20 @@ def norm_name(s):
     s = unicodedata.normalize('NFKD', s).encode('ascii', 'ignore').decode('ascii')
     return re.sub(r'\s+', ' ', s)
 
+def find_col(df, exact=(), contains=()):
+    # Busca una columna por nombre tolerando mayusculas, acentos y saltos de
+    # linea. Devuelve None si no existe (el campo queda como "s/d" en el
+    # dashboard y el script lo avisa, en vez de fallar).
+    cols = {norm_name(c): c for c in df.columns}
+    for e in exact:
+        if norm_name(e) in cols:
+            return cols[norm_name(e)]
+    for k, c in cols.items():
+        if any(norm_name(t) in k for t in contains):
+            return c
+    return None
+
+
 # ---------- Registro_Auditorias ----------
 reg = pd.read_excel(PATH, sheet_name='Registro_Auditorias', header=3, engine='openpyxl')
 reg.columns = [str(c).replace('\n', ' ').strip() for c in reg.columns]
@@ -106,6 +120,12 @@ auditor_idx = {s: i for i, s in enumerate(auditors)}
 estado_idx = {s: i for i, s in enumerate(estados)}
 sociedad_idx = {s: i for i, s in enumerate(sociedades)}
 
+# Campos nuevos (v2): CE (centro) por tienda y referencia del informe por auditoria.
+COL_CE_REG = find_col(reg, exact=['CE', 'CENTRO', 'COD. CENTRO', 'CODIGO CENTRO', 'CENTRO SAP'])
+if COL_CE_REG is None:
+    print("AVISO: Registro_Auditorias no tiene columna de CE/centro; se intentara con la hoja Tiendas.")
+reg['REF. INFORME'] = reg['REF. INFORME'].fillna('').astype(str).str.strip()
+
 audits = []
 # Montos con 2 decimales, no int redondeado por fila: redondear cada fila a
 # entero antes de sumar 79+ auditorías acumula un desfase de un par de
@@ -134,6 +154,7 @@ for _, r in reg.iterrows():
         round(float(r['FALTANTES PVP']), 2),
         round(float(r['SOBRANTES PVP']), 2),
         round(float(r['DEFECTOS FÁBRICA PVP']), 2),
+        r['REF. INFORME'],   # [18] referencia del informe
     ])
 
 # ---------- Tiendas (coverage snapshot, fixed "as of" metric) ----------
@@ -195,6 +216,22 @@ for s in stores:
         close_date = None
     stores_active.append(is_active)
     stores_close_date.append(close_date)
+
+# CE (centro) por tienda: primero la columna de Registro_Auditorias; si no hay,
+# la hoja Tiendas (por nombre de tienda).
+store_ce = [None] * len(stores)
+if COL_CE_REG is not None:
+    ce_by_store = reg[reg[COL_CE_REG].notna()].drop_duplicates('ALMACÉN').set_index('ALMACÉN')[COL_CE_REG]
+    store_ce = [str(ce_by_store[s]).strip() if s in ce_by_store.index else None for s in stores]
+if all(v is None for v in store_ce):
+    COL_CE_TIE = find_col(tiendas, exact=['CE', 'CENTRO', 'COD. CENTRO', 'CODIGO CENTRO', 'CENTRO SAP'])
+    if COL_CE_TIE is not None:
+        store_ce = [str(tiendas_map.loc[s.strip().upper()][COL_CE_TIE]).strip()
+                    if s.strip().upper() in tiendas_map.index and pd.notna(tiendas_map.loc[s.strip().upper()][COL_CE_TIE]) else None
+                    for s in stores]
+if all(v is None for v in store_ce):
+    print("AVISO: no se encontro la columna de CE (centro). Columnas Registro_Auditorias:", list(reg.columns))
+    print("       Columnas Tiendas:", list(tiendas.columns))
 
 # ---------- Correos auditores (tipo de auditor, para KPI Auditores) ----------
 try:
@@ -264,6 +301,15 @@ sku_desc_list = sorted(sku['DESC_KEY'].unique().tolist())
 sku_desc_idx = {s: i for i, s in enumerate(sku_desc_list)}
 tipo_idx = {t: i for i, t in enumerate(TIPOS)}
 
+# Unidades por SKU (v2). Se conserva el signo de la columna del Excel.
+COL_UNID = find_col(sku, exact=['CANTIDAD', 'UNIDADES', 'CANT.', 'CANT', 'DIFERENCIA', 'CANTIDAD DIFERENCIA'],
+                    contains=['UNIDAD', 'CANTIDAD'])
+if COL_UNID is None:
+    print("AVISO: no se encontro la columna de unidades en Detalle_SKUs. Columnas:", list(sku.columns))
+else:
+    print("Unidades de SKU tomadas de la columna:", COL_UNID)
+    sku[COL_UNID] = pd.to_numeric(sku[COL_UNID], errors='coerce').fillna(0)
+
 sku_rows = []
 for _, r in sku.iterrows():
     st_i = store_idx.get(r['ALMACEN_R'], -1) if r['ALMACEN_R'] else -1
@@ -273,7 +319,7 @@ for _, r in sku.iterrows():
         sku_desc_idx[r['DESC_KEY']],
         st_i,
         round(float(r['COSTO TOTAL']), 1),
-    ])
+    ] + ([round(float(r[COL_UNID]), 2)] if COL_UNID is not None else []))   # [5] unidades (opcional)
 
 payload = {
     'stores': stores, 'lines': lines, 'zones': zones, 'auditors': auditors,
@@ -281,7 +327,7 @@ payload = {
     'sociedades': sociedades, 'funnelStages': FUNNEL_STAGES,
     'storesActive': stores_active, 'storesCloseDate': stores_close_date,
     'tiposAuditor': tipos_auditor, 'auditorTipoIdx': auditor_tipo_idx,
-    'activeRoster': active_roster,
+    'activeRoster': active_roster, 'storeCE': store_ce,
     'audits': audits, 'skus': sku_rows, 'coverage': coverage, 'asOf': HOY.strftime('%Y-%m-%d'),
     'skuRange': [sku['FECHA AUDITORÍA'].min().strftime('%Y-%m-%d'), sku['FECHA AUDITORÍA'].max().strftime('%Y-%m-%d')],
 }
