@@ -17,6 +17,15 @@ echo (si esta abierto en Excel, la actualizacion va a fallar).
 echo.
 pause
 
+echo Trayendo la ultima version del generador desde GitHub...
+git pull --rebase origin main
+if errorlevel 1 (
+    echo.
+    echo No se pudo sincronizar con GitHub. Si hay cambios sin guardar o un conflicto, resuelvelo y vuelve a ejecutar.
+    pause
+    exit /b 1
+)
+
 echo Generando Dashboard_Gerencial.html con los datos actuales...
 python generar_dashboard.py
 if errorlevel 1 (
