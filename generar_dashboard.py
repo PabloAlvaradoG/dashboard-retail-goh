@@ -80,7 +80,7 @@ RIESGO_ORDER = ['BAJO', 'MEDIO', 'ALTO', 'CRÍTICO']
 
 for col in ['TOTAL INVENTARIO COSTO', 'RESULT. A COBRAR COSTO', 'VALOR COBRADO',
             'MAL ESTADO CADUCADOS PVP', 'SCORE (0/100)', 'FALTANTES PVP', 'SOBRANTES PVP',
-            'DEFECTOS FÁBRICA PVP']:
+            'DEFECTOS FÁBRICA PVP', 'RESULT. A COBRAR PVP']:
     reg[col] = pd.to_numeric(reg[col], errors='coerce').fillna(0)
 
 reg['Ajuste (Si/No)'] = reg['Ajuste (Si/No)'].astype(str).str.strip().str.upper()
@@ -122,7 +122,7 @@ def norm_ce(v):
 
 
 _tie_raw = pd.read_excel(PATH, sheet_name='Tiendas', engine='openpyxl')
-CE_NAMES = ['CE', 'CENTRO', 'COD. CENTRO', 'CODIGO CENTRO', 'CENTRO SAP']
+CE_NAMES = ['CE.', 'CE', 'CENTRO', 'CENTRO (CE)', 'COD. CENTRO', 'CODIGO CENTRO', 'CENTRO SAP']
 COL_CE_REG = find_col(reg, exact=CE_NAMES)
 COL_CE_TIE = find_col(_tie_raw, exact=CE_NAMES)
 name_alias = {}      # nombre antiguo -> nombre vigente
@@ -140,9 +140,41 @@ else:
     _canon = (_tie_raw[_tie_raw['CE_KEY'].notna()]
               .sort_values('_activa', ascending=False, kind='stable')
               .drop_duplicates('CE_KEY')
-              .set_index('CE_KEY')['Nombre tienda'].astype(str).str.strip())
+              .set_index('CE_KEY')[['Nombre tienda', 'Línea', 'Zona']])
     reg['CE_KEY'] = reg[COL_CE_REG].apply(norm_ce)
-    _new = [(_canon.get(k) if k is not None else None) or n for k, n in zip(reg['CE_KEY'], reg['ALMACÉN'])]
+    # Proteccion: el CE digitado en el registro a veces es incorrecto (p. ej. el
+    # CE de otra tienda). Solo se reasigna al nombre vigente cuando LINEA y ZONA
+    # del registro coinciden con las de la hoja Tiendas para ese centro; si no,
+    # se conserva el nombre original y se lista el caso para revision.
+    # Decision por NOMBRE completo (no por fila), para no partir una tienda en
+    # dos: un nombre se renombra solo si TODAS sus filas con CE conocido apuntan
+    # al mismo nombre vigente, ninguna lo contradice y el propio nombre no figura
+    # como vigente en la hoja Tiendas.
+    _props = {}       # nombre -> lista de (CE, nombre_vigente | None si no coincide linea/zona | '=' si ya es vigente)
+    for k, n, l, z in zip(reg['CE_KEY'], reg['ALMACÉN'], reg['LÍNEA'], reg['ZONA']):
+        if k is None or k not in _canon.index:
+            continue
+        c = _canon.loc[k]
+        cn = str(c['Nombre tienda']).strip()
+        if cn == n:
+            _props.setdefault(n, []).append((k, '='))
+        elif norm_name(c['Línea']) == norm_name(l) and norm_name(c['Zona']) == norm_name(z):
+            _props.setdefault(n, []).append((k, cn))
+        else:
+            _props.setdefault(n, []).append((k, None))
+    _rename, _conf = {}, {}
+    for n, lst in _props.items():
+        targets = {t for _, t in lst if t not in (None, '=')}
+        bad = [(k, t) for k, t in lst if t is None]
+        if not targets:
+            if bad:
+                _conf[n] = ('CE no coincide en linea/zona con Tiendas', sorted({k for k, _ in bad}), None)
+            continue
+        if len(targets) == 1 and not bad and all(t != '=' for _, t in lst):
+            _rename[n] = next(iter(targets))
+        else:
+            _conf[n] = ('CE mezclados (varias tiendas o centros bajo el mismo nombre)', sorted({k for k, _ in lst}), sorted(targets))
+    _new = [_rename.get(n, n) for n in reg['ALMACÉN']]
     for old, new in set(zip(reg['ALMACÉN'], _new)):
         if old != new:
             name_alias[old] = new
@@ -152,6 +184,10 @@ else:
           + (f"; {_sin_ce} auditoria(s) sin CE (se mantienen por nombre)" if _sin_ce else ""))
     for old, new in sorted(name_alias.items()):
         print(f"    {old}  ->  {new}")
+    if _conf:
+        print(f"AVISO: {len(_conf)} nombre(s) con CE dudosos; se mantienen por nombre (revisar el CE en Registro_Auditorias o la hoja Tiendas):")
+        for n_, (motivo, ces, tg) in sorted(_conf.items()):
+            print(f"    {n_}  [CE {', '.join(ces)}]  {motivo}" + (f" -> posibles: {', '.join(tg)}" if tg else ""))
 
 stores = sorted(reg['ALMACÉN'].unique().tolist())
 lines = sorted(reg['LÍNEA'].unique().tolist())
@@ -199,6 +235,7 @@ for _, r in reg.iterrows():
         round(float(r['SOBRANTES PVP']), 2),
         round(float(r['DEFECTOS FÁBRICA PVP']), 2),
         r['REF. INFORME'],   # [18] referencia del informe
+        round(float(r['RESULT. A COBRAR PVP']), 2),   # [19] resultado a cobrar PVP (columna real del registro)
     ])
 
 # ---------- Tiendas (coverage snapshot, fixed "as of" metric) ----------
@@ -324,12 +361,17 @@ sku['ALMACEN_JOIN'] = sku['REF. INFORME'].map(reg_map)
 def resolve_store(row):
     if pd.notna(row['ALMACEN_JOIN']):
         return row['ALMACEN_JOIN']
+    if row['CE_KEY'] is not None and row['CE_KEY'] in ce_to_store:
+        return ce_to_store[row['CE_KEY']]          # identidad por centro
     own = name_alias.get(str(row['ALMACÉN']).strip(), str(row['ALMACÉN']).strip())
     if own and own not in ('0001', 'nan', 'None') and own in store_idx:
         return own
     return None
 
 
+COL_CE_SKU = find_col(sku, exact=CE_NAMES)
+ce_to_store = reg[reg['CE_KEY'].notna()].drop_duplicates('CE_KEY').set_index('CE_KEY')['ALMACÉN'].to_dict()
+sku['CE_KEY'] = sku[COL_CE_SKU].apply(norm_ce) if COL_CE_SKU is not None else None
 sku['ALMACEN_R'] = sku.apply(resolve_store, axis=1)
 
 sku['MATERIAL (SKU)'] = sku['MATERIAL (SKU)'].astype(str).str.strip()

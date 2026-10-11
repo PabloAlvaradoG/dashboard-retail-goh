@@ -500,7 +500,7 @@
   <!-- ===== Sub-pestaña: Auditorías realizadas por mes ===== -->
   <div class="subpanel" id="subpanel-mensual">
     <div class="kpi-grid" id="mensualKpis" style="margin-bottom:16px;"></div>
-    <p class="sec-note">Selecciona un mes (o todo el período) y el tipo de auditor. El detalle se agrupa por línea de negocio → zona → tienda: haz clic en una fila de línea o zona para desplegar/contraer. “A cobrar PVP” = faltantes + sobrantes + mal estado/caducados + defectos de fábrica a precio de venta; “A cobrar costo” = resultado neto a costo.</p>
+    <p class="sec-note">Selecciona un mes (o todo el período) y el tipo de auditor. El detalle se agrupa por línea de negocio → zona → tienda: haz clic en una fila de línea o zona para desplegar/contraer. “A cobrar PVP” = RESULT. A COBRAR PVP del registro; “A cobrar costo” = RESULT. A COBRAR COSTO.</p>
     <div class="card">
       <div class="mes-toolbar">
         <span class="tb-lbl">Tipo de auditor</span>
@@ -1354,7 +1354,7 @@
   const mesOpen = new Set();              // nodos desplegados ('L<línea>' / 'Z<línea>|<zona>')
   let lastMesFa = [], lastMesFaT = [], mesAllKeys = [];
   function mesTipoOK(r){ return mesTipo==='todos' || DATA.tiposAuditor[DATA.auditorTipoIdx[r[4]]]===mesTipo; }
-  function pvpNet(r){ return r[12]+r[15]+r[16]+r[17]; }             // resultado neto a precio de venta
+  function pvpNet(r){ return (r.length>19 && r[19]!=null) ? r[19] : r[12]+r[15]+r[16]+r[17]; }   // RESULT. A COBRAR PVP del registro (si no viene, aproximación por componentes)
   function storeCE(si){ return (DATA.storeCE && DATA.storeCE[si]) || null; }  // centro SAP (opcional)
   function refInforme(r){ return (r.length>18 && r[18]) ? r[18] : null; }      // referencia del informe (opcional)
   const ESTADO_INF_COLOR = ['var(--critical)','var(--warning)','var(--accent)','var(--good)'];
