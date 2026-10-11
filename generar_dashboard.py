@@ -106,6 +106,53 @@ FUNNEL_MAP = {
     'Procesado - Cobrado': 3, 'Procesado - No Cobrado': 3, 'Pasado a RRHH para cobro': 3,
 }
 
+# ---------- Identidad de tienda = CENTRO (CE), no el nombre ----------
+# Hay tiendas que cambian de nombre. Si el cruce se hiciera por nombre, la
+# misma tienda quedaria partida en dos (historial viejo y nuevo) y la hoja
+# Tiendas no la reconoceria. Aqui cada auditoria se reasigna al nombre
+# VIGENTE de su centro segun la hoja Tiendas; todo lo demas (historial,
+# activa/cerrada, cobertura, pendientes) se calcula sobre ese nombre unico.
+def norm_ce(v):
+    if v is None or (isinstance(v, float) and pd.isna(v)):
+        return None
+    t = str(v).strip().upper()
+    if t.endswith('.0'):
+        t = t[:-2]
+    return t if t and t not in ('NAN', 'NONE', '0') else None
+
+
+_tie_raw = pd.read_excel(PATH, sheet_name='Tiendas', engine='openpyxl')
+CE_NAMES = ['CE', 'CENTRO', 'COD. CENTRO', 'CODIGO CENTRO', 'CENTRO SAP']
+COL_CE_REG = find_col(reg, exact=CE_NAMES)
+COL_CE_TIE = find_col(_tie_raw, exact=CE_NAMES)
+name_alias = {}      # nombre antiguo -> nombre vigente
+if COL_CE_REG is None or COL_CE_TIE is None:
+    print("AVISO: no se encontro la columna de CE (centro) en",
+          "Registro_Auditorias" if COL_CE_REG is None else "", "y" if (COL_CE_REG is None and COL_CE_TIE is None) else "",
+          "Tiendas" if COL_CE_TIE is None else "", "- se usa el NOMBRE de la tienda como identidad.")
+    print("  Columnas Registro_Auditorias:", list(reg.columns))
+    print("  Columnas Tiendas:", list(_tie_raw.columns))
+    reg['CE_KEY'] = reg[COL_CE_REG].apply(norm_ce) if COL_CE_REG is not None else None
+else:
+    _tie_raw['CE_KEY'] = _tie_raw[COL_CE_TIE].apply(norm_ce)
+    _tie_raw['_activa'] = _tie_raw['Estado'].astype(str).str.strip().str.upper().eq('ACTIVA')
+    # si un centro aparece varias veces (p. ej. fila vieja cerrada + fila nueva activa), gana la activa
+    _canon = (_tie_raw[_tie_raw['CE_KEY'].notna()]
+              .sort_values('_activa', ascending=False, kind='stable')
+              .drop_duplicates('CE_KEY')
+              .set_index('CE_KEY')['Nombre tienda'].astype(str).str.strip())
+    reg['CE_KEY'] = reg[COL_CE_REG].apply(norm_ce)
+    _new = [(_canon.get(k) if k is not None else None) or n for k, n in zip(reg['CE_KEY'], reg['ALMACÉN'])]
+    for old, new in set(zip(reg['ALMACÉN'], _new)):
+        if old != new:
+            name_alias[old] = new
+    reg['ALMACÉN'] = _new
+    _sin_ce = int(reg['CE_KEY'].isna().sum())
+    print(f"Identidad por CE: {len(name_alias)} nombre(s) de tienda reasignado(s) al nombre vigente"
+          + (f"; {_sin_ce} auditoria(s) sin CE (se mantienen por nombre)" if _sin_ce else ""))
+    for old, new in sorted(name_alias.items()):
+        print(f"    {old}  ->  {new}")
+
 stores = sorted(reg['ALMACÉN'].unique().tolist())
 lines = sorted(reg['LÍNEA'].unique().tolist())
 zones = sorted(reg['ZONA'].unique().tolist())
@@ -121,9 +168,6 @@ estado_idx = {s: i for i, s in enumerate(estados)}
 sociedad_idx = {s: i for i, s in enumerate(sociedades)}
 
 # Campos nuevos (v2): CE (centro) por tienda y referencia del informe por auditoria.
-COL_CE_REG = find_col(reg, exact=['CE', 'CENTRO', 'COD. CENTRO', 'CODIGO CENTRO', 'CENTRO SAP'])
-if COL_CE_REG is None:
-    print("AVISO: Registro_Auditorias no tiene columna de CE/centro; se intentara con la hoja Tiendas.")
 reg['REF. INFORME'] = reg['REF. INFORME'].fillna('').astype(str).str.strip()
 
 audits = []
@@ -161,6 +205,11 @@ for _, r in reg.iterrows():
 tiendas = pd.read_excel(PATH, sheet_name='Tiendas', engine='openpyxl')
 tiendas['Estado'] = tiendas['Estado'].astype(str).str.strip().str.upper()
 activas = tiendas[tiendas['Estado'] == 'ACTIVA'].copy()
+if COL_CE_TIE is not None:
+    # un mismo centro no puede contar dos veces como tienda activa (p. ej. nombre viejo y nuevo)
+    activas['CE_KEY'] = activas[COL_CE_TIE].apply(norm_ce)
+    activas = pd.concat([activas[activas['CE_KEY'].isna()],
+                         activas[activas['CE_KEY'].notna()].drop_duplicates('CE_KEY', keep='last')])
 HOY = pd.Timestamp.today().normalize()
 
 ultima_por_tienda = reg.groupby('ALMACÉN')['FECHA AUDITORÍA'].max()
@@ -202,6 +251,7 @@ active_roster = [
 # Cerrada — otherwise an active/newly-opened store gets wrongly listed as
 # closed.
 tiendas['NombreNorm'] = tiendas['Nombre tienda'].astype(str).str.strip().str.upper()
+# (los nombres de `stores` ya son los vigentes por CE, asi que este cruce por nombre ya equivale a cruce por CE)
 tiendas_map = tiendas.drop_duplicates('NombreNorm').set_index('NombreNorm')
 stores_active = []
 stores_close_date = []
@@ -219,19 +269,8 @@ for s in stores:
 
 # CE (centro) por tienda: primero la columna de Registro_Auditorias; si no hay,
 # la hoja Tiendas (por nombre de tienda).
-store_ce = [None] * len(stores)
-if COL_CE_REG is not None:
-    ce_by_store = reg[reg[COL_CE_REG].notna()].drop_duplicates('ALMACÉN').set_index('ALMACÉN')[COL_CE_REG]
-    store_ce = [str(ce_by_store[s]).strip() if s in ce_by_store.index else None for s in stores]
-if all(v is None for v in store_ce):
-    COL_CE_TIE = find_col(tiendas, exact=['CE', 'CENTRO', 'COD. CENTRO', 'CODIGO CENTRO', 'CENTRO SAP'])
-    if COL_CE_TIE is not None:
-        store_ce = [str(tiendas_map.loc[s.strip().upper()][COL_CE_TIE]).strip()
-                    if s.strip().upper() in tiendas_map.index and pd.notna(tiendas_map.loc[s.strip().upper()][COL_CE_TIE]) else None
-                    for s in stores]
-if all(v is None for v in store_ce):
-    print("AVISO: no se encontro la columna de CE (centro). Columnas Registro_Auditorias:", list(reg.columns))
-    print("       Columnas Tiendas:", list(tiendas.columns))
+ce_by_store = reg[reg['CE_KEY'].notna()].drop_duplicates('ALMACÉN').set_index('ALMACÉN')['CE_KEY']
+store_ce = [ce_by_store.get(s_) for s_ in stores]
 
 # ---------- Correos auditores (tipo de auditor, para KPI Auditores) ----------
 try:
@@ -285,7 +324,7 @@ sku['ALMACEN_JOIN'] = sku['REF. INFORME'].map(reg_map)
 def resolve_store(row):
     if pd.notna(row['ALMACEN_JOIN']):
         return row['ALMACEN_JOIN']
-    own = str(row['ALMACÉN']).strip()
+    own = name_alias.get(str(row['ALMACÉN']).strip(), str(row['ALMACÉN']).strip())
     if own and own not in ('0001', 'nan', 'None') and own in store_idx:
         return own
     return None
